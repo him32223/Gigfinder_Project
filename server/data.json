@@ -1,4 +1,19 @@
 {
-  "users": [],
-  "bookings": []
+  "users": [
+    {
+      "id": 1769785768728,
+      "email": "bryan@gmail.com",
+      "password": "bryan"
+    }
+  ],
+  "bookings": [
+    {
+      "id": 1769785777746,
+      "eventId": 2,
+      "eventName": "Coldplay",
+      "user": "bryan@gmail.com",
+      "quantity": "3",
+      "date": "2026-01-30T15:09:37.746Z"
+    }
+  ]
 }

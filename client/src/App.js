@@ -2,19 +2,28 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
-  // State Management
-  const [user, setUser] = useState(null); // If null, user is not logged in
-  const [view, setView] = useState('login'); // 'login', 'register', 'home'
+  const [user, setUser] = useState(null);
+  const [view, setView] = useState('login');
   
-  // Login/Register Form State
+  // Form States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // App Data State
+  // Data States
   const [events, setEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // --- AUTHENTICATION HANDLERS ---
+  // --- MODAL STATE ---
+  const [modal, setModal] = useState({ show: false, title: '', message: '', type: '' });
+  const [bookingModal, setBookingModal] = useState({ show: false, event: null, quantity: 1 });
+
+  // --- API CALLS ---
+  const fetchEvents = async () => {
+    const res = await fetch('http://localhost:5000/api/events');
+    const data = await res.json();
+    setEvents(data);
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     const res = await fetch('http://localhost:5000/api/register', {
@@ -23,11 +32,13 @@ function App() {
         body: JSON.stringify({ email, password })
     });
     const data = await res.json();
+    
     if (res.ok) {
-        alert("Registration Successful! Please Login.");
+        // Show Success Modal instead of Alert
+        setModal({ show: true, title: 'Success! 🎉', message: 'Account created. Please log in.', type: 'success' });
         setView('login');
     } else {
-        alert(data.message);
+        setModal({ show: true, title: 'Error ❌', message: data.message, type: 'error' });
     }
   };
 
@@ -39,27 +50,14 @@ function App() {
         body: JSON.stringify({ email, password })
     });
     const data = await res.json();
+    
     if (res.ok) {
         setUser(data.user);
         setView('home');
-        fetchEvents(); // Fetch events only after login
+        fetchEvents();
     } else {
-        alert(data.message);
+        setModal({ show: true, title: 'Login Failed ⚠️', message: data.message, type: 'error' });
     }
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setView('login');
-    setEmail('');
-    setPassword('');
-  };
-
-  // --- EVENT HANDLERS ---
-  const fetchEvents = async () => {
-    const res = await fetch('http://localhost:5000/api/events');
-    const data = await res.json();
-    setEvents(data);
   };
 
   const handleSearch = async (e) => {
@@ -70,56 +68,99 @@ function App() {
     setEvents(data);
   };
 
-  const handleBook = async (eventId, eventName) => {
-    const quantity = prompt(`Booking tickets for ${eventName}.\nHow many?`);
-    if (!quantity) return;
+  // --- BOOKING LOGIC ---
+  
+  // 1. Open Booking Modal
+  const openBookingModal = (event) => {
+      setBookingModal({ show: true, event: event, quantity: 1 });
+  };
 
+  // 2. Confirm Booking
+  const confirmBooking = async () => {
     const res = await fetch('http://localhost:5000/api/book', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventId, quantity, user: user.email })
+      body: JSON.stringify({ 
+          eventId: bookingModal.event.id, 
+          eventName: bookingModal.event.name,
+          quantity: bookingModal.quantity, 
+          user: user.email 
+      })
     });
-    const data = await res.json();
-    alert(data.message);
+    
+    // Close booking modal
+    setBookingModal({ show: false, event: null, quantity: 1 });
+
+    // Show Success Modal
+    setModal({ show: true, title: 'Booking Confirmed! 🎟️', message: 'Your tickets have been sent to your email.', type: 'success' });
   };
 
-  // --- RENDER HELPERS ---
-  
-  // 1. Authentication View
+  const closeModal = () => setModal({ ...modal, show: false });
+
+  // --- UI COMPONENTS ---
+
+  const NotificationModal = () => {
+      if (!modal.show) return null;
+      return (
+          <div className="modal-overlay">
+              <div className="modal-content">
+                  <h2 className="modal-title">{modal.title}</h2>
+                  <p className="modal-text">{modal.message}</p>
+                  <button className="book-btn" onClick={closeModal}>Okay</button>
+              </div>
+          </div>
+      );
+  };
+
+  const BookingPopup = () => {
+      if (!bookingModal.show) return null;
+      return (
+          <div className="modal-overlay">
+              <div className="modal-content">
+                  <h2 className="modal-title">Book Tickets</h2>
+                  <p className="modal-text">Event: <strong>{bookingModal.event.name}</strong></p>
+                  
+                  <div style={{marginBottom: '20px'}}>
+                    <label style={{color: '#b0b0b0', display: 'block', marginBottom: '5px'}}>Quantity:</label>
+                    <input 
+                        type="number" 
+                        min="1" 
+                        max="10"
+                        className="auth-input"
+                        value={bookingModal.quantity}
+                        onChange={(e) => setBookingModal({...bookingModal, quantity: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="modal-actions">
+                    <button className="btn-secondary" onClick={() => setBookingModal({show: false})}>Cancel</button>
+                    <button className="book-btn" style={{marginTop: 0}} onClick={confirmBooking}>Confirm</button>
+                  </div>
+              </div>
+          </div>
+      );
+  };
+
+  // --- MAIN RENDER ---
+
   if (view === 'login' || view === 'register') {
     return (
       <div className="app-container">
+        <NotificationModal />
         <div className="auth-container">
             <div className="auth-card">
                 <h1 className="logo">GigFinder</h1>
                 <h2>{view === 'login' ? 'Welcome Back' : 'Create Account'}</h2>
                 
                 <form onSubmit={view === 'login' ? handleLogin : handleRegister}>
-                    <input 
-                        className="auth-input" 
-                        type="email" 
-                        placeholder="Email" 
-                        value={email} onChange={e => setEmail(e.target.value)} 
-                        required 
-                    />
-                    <input 
-                        className="auth-input" 
-                        type="password" 
-                        placeholder="Password" 
-                        value={password} onChange={e => setPassword(e.target.value)} 
-                        required 
-                    />
-                    <button className="book-btn" type="submit">
-                        {view === 'login' ? 'Sign In' : 'Register'}
-                    </button>
+                    <input className="auth-input" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
+                    <input className="auth-input" type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <button className="book-btn" type="submit">{view === 'login' ? 'Sign In' : 'Register'}</button>
                 </form>
 
                 <p style={{marginTop: '20px', color: '#b0b0b0'}}>
                     {view === 'login' ? "New here? " : "Already have an account? "}
-                    <span 
-                        style={{color: '#bb86fc', cursor: 'pointer', textDecoration: 'underline'}}
-                        onClick={() => setView(view === 'login' ? 'register' : 'login')}
-                    >
+                    <span style={{color: '#bb86fc', cursor: 'pointer', textDecoration: 'underline'}} onClick={() => setView(view === 'login' ? 'register' : 'login')}>
                         {view === 'login' ? "Create Account" : "Sign In"}
                     </span>
                 </p>
@@ -129,28 +170,21 @@ function App() {
     );
   }
 
-  // 2. Main App View (Dashboard)
   return (
     <div className="app-container">
-      {/* Navbar */}
+      <NotificationModal />
+      <BookingPopup />
+      
       <nav className="navbar">
         <div className="logo">GigFinder</div>
         <div style={{display: 'flex', alignItems: 'center', gap: '20px'}}>
             <span>Hello, <span style={{color: '#bb86fc'}}>{user.email}</span></span>
-            <button className="nav-btn" onClick={handleLogout}>Logout</button>
+            <button className="nav-btn" onClick={() => { setUser(null); setView('login'); }}>Logout</button>
         </div>
       </nav>
 
-      {/* Search */}
-      <input 
-        className="search-bar" 
-        type="text" 
-        placeholder="🔍 Search for artists, venues..." 
-        value={searchTerm}
-        onChange={handleSearch}
-      />
+      <input className="search-bar" type="text" placeholder="🔍 Search for artists, venues..." value={searchTerm} onChange={handleSearch} />
 
-      {/* Events Grid */}
       <div className="events-grid">
         {events.map(event => (
           <div key={event.id} className="event-card">
@@ -159,12 +193,8 @@ function App() {
                 <h2 className="card-title">{event.name}</h2>
                 <p className="card-info">📅 {event.date}</p>
                 <p className="card-info">📍 {event.venue}</p>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px'}}>
-                    <span style={{color: '#03dac6', fontSize: '1.2rem', fontWeight: 'bold'}}>RM{event.price}</span>
-                </div>
-                <button className="book-btn" onClick={() => handleBook(event.id, event.name)}>
-                    Book Ticket
-                </button>
+                <span style={{color: '#03dac6', fontSize: '1.2rem', fontWeight: 'bold', display: 'block', marginTop: '10px'}}>RM{event.price}</span>
+                <button className="book-btn" onClick={() => openBookingModal(event)}>Book Ticket</button>
             </div>
           </div>
         ))}
