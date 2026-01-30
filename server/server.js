@@ -7,6 +7,13 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
+// --- LOGGER MIDDLEWARE (Task 3: Evidence of Testing) ---
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} request to ${req.url}`);
+    next(); // Continue to the actual route
+});
+
 const DATA_FILE = './data.json';
 
 // --- HELPER FUNCTIONS ---
@@ -54,36 +61,47 @@ app.post('/api/register', (req, res) => {
     res.status(201).json({ message: "Registration Successful!", user: newUser });
 });
 
-// 4. Login
+// 4. Login (With Logs)
 app.post('/api/login', (req, res) => {
-    const { email, password } = req.body;
+    const { email } = req.body; // Don't log passwords!
     const db = readData();
-    const user = db.users.find(u => u.email === email && u.password === password);
+    
+    console.log(`Login Attempt: ${email}`); // <--- LOG
+
+    const user = db.users.find(u => u.email === req.body.email && u.password === req.body.password);
 
     if (user) {
         if (user.suspensionEnd && new Date() < new Date(user.suspensionEnd)) {
+            console.warn(`Login Blocked: User ${email} is suspended.`); // <--- LOG
             return res.status(403).json({ message: `Suspended until ${user.suspensionEnd}` });
         }
-        user.suspensionEnd = null; // Clear expired suspension
+        console.log(`Login Success: ${email} (${user.role})`); // <--- LOG
+        user.suspensionEnd = null;
         writeData(db);
         res.json({ message: "Login successful", user });
     } else {
+        console.warn(`Login Failed: Invalid credentials for ${email}`); // <--- LOG
         res.status(401).json({ message: "Invalid credentials" });
     }
 });
-
-// 5. Book Ticket (With Inventory Check)
+// 5. Book Ticket (With Logs)
 app.post('/api/book', (req, res) => {
     const { eventId, user, quantity, eventName, totalPrice } = req.body;
     const db = readData();
 
+    console.log(`Processing Booking: User ${user} wants ${quantity} tickets for ${eventName}`); // <--- LOG
+
     // Find Event
     const eventIndex = db.events.findIndex(e => e.id === eventId);
-    if (eventIndex === -1) return res.status(404).json({ message: "Event not found" });
+    if (eventIndex === -1) {
+        console.error(`Error: Event ID ${eventId} not found`); // <--- ERROR LOG
+        return res.status(404).json({ message: "Event not found" });
+    }
     
     // Check Inventory
     const event = db.events[eventIndex];
     if (event.sold + quantity > event.capacity) {
+        console.warn(`Booking Failed: Not enough stock. Requested: ${quantity}, Left: ${event.capacity - event.sold}`); // <--- WARNING LOG
         return res.status(400).json({ message: `Not enough tickets! Only ${event.capacity - event.sold} left.` });
     }
 
@@ -95,6 +113,7 @@ app.post('/api/book', (req, res) => {
     db.bookings.push(newBooking);
     
     writeData(db);
+    console.log(`Booking Confirmed: ID ${newBooking.id}`); // <--- SUCCESS LOG
     res.status(201).json({ message: "Booking Confirmed!", booking: newBooking });
 });
 

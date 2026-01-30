@@ -13,6 +13,13 @@
       "password": "bryan",
       "role": "user",
       "suspensionEnd": null
+    },
+    {
+      "id": 1769787359977,
+      "email": "bryan234@gmail.com",
+      "password": "bryan",
+      "role": "user",
+      "suspensionEnd": null
     }
   ],
   "events": [
@@ -24,7 +31,7 @@
       "price": 150,
       "image": "https://placehold.co/400",
       "capacity": 100,
-      "sold": 98
+      "sold": 100
     },
     {
       "id": 2,
@@ -44,7 +51,7 @@
       "price": 35,
       "image": "https://placehold.co/400",
       "capacity": 50,
-      "sold": 0
+      "sold": 50
     },
     {
       "id": 1769786615171,
@@ -75,6 +82,24 @@
       "quantity": 1,
       "totalPrice": 123,
       "date": "2026-01-30T15:24:11.327Z"
+    },
+    {
+      "id": 1769787575428,
+      "eventId": 1,
+      "eventName": "The Midnight",
+      "user": "bryan234@gmail.com",
+      "quantity": 2,
+      "totalPrice": 300,
+      "date": "2026-01-30T15:39:35.428Z"
+    },
+    {
+      "id": 1769788325495,
+      "eventId": 3,
+      "eventName": "Local Indie Night",
+      "user": "bryan234@gmail.com",
+      "quantity": 50,
+      "totalPrice": 1750,
+      "date": "2026-01-30T15:52:05.495Z"
     }
   ]
 }
