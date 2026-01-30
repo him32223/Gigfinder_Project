@@ -8,36 +8,73 @@
       "suspensionEnd": null
     },
     {
-      "id": 2,
-      "email": "user@test.com",
-      "password": "123",
-      "role": "user",
-      "suspensionEnd": null
-    },
-    {
-      "id": 1769786114227,
-      "email": "bryan@gmail.com",
-      "password": "bryan",
-      "role": "user",
-      "suspensionEnd": "2026-02-01T15:15:22.893Z"
-    },
-    {
-      "id": 1769786135738,
+      "id": 1769786627140,
       "email": "bryan123@gmail.com",
       "password": "bryan",
       "role": "user",
       "suspensionEnd": null
     }
   ],
+  "events": [
+    {
+      "id": 1,
+      "name": "The Midnight",
+      "date": "2026-02-14",
+      "venue": "KL Live",
+      "price": 150,
+      "image": "https://placehold.co/400",
+      "capacity": 100,
+      "sold": 98
+    },
+    {
+      "id": 2,
+      "name": "Coldplay",
+      "date": "2026-03-01",
+      "venue": "Bukit Jalil",
+      "price": 300,
+      "image": "https://placehold.co/400",
+      "capacity": 5000,
+      "sold": 1200
+    },
+    {
+      "id": 3,
+      "name": "Local Indie Night",
+      "date": "2026-02-20",
+      "venue": "Merdekarya",
+      "price": 35,
+      "image": "https://placehold.co/400",
+      "capacity": 50,
+      "sold": 0
+    },
+    {
+      "id": 1769786615171,
+      "name": "dd",
+      "venue": "dd",
+      "date": "2026-01-30",
+      "price": 123,
+      "capacity": 123,
+      "image": "https://placehold.co/400",
+      "sold": 4
+    }
+  ],
   "bookings": [
     {
-      "id": 1769786169430,
-      "eventId": 2,
-      "eventName": "Coldplay",
+      "id": 1769786638862,
+      "eventId": 1769786615171,
+      "eventName": "dd",
       "user": "bryan123@gmail.com",
-      "quantity": 4,
-      "totalPrice": 1200,
-      "date": "2026-01-30T15:16:09.430Z"
+      "quantity": 3,
+      "totalPrice": 369,
+      "date": "2026-01-30T15:23:58.862Z"
+    },
+    {
+      "id": 1769786651327,
+      "eventId": 1769786615171,
+      "eventName": "dd",
+      "user": "bryan123@gmail.com",
+      "quantity": 1,
+      "totalPrice": 123,
+      "date": "2026-01-30T15:24:11.327Z"
     }
   ]
 }

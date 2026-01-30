@@ -275,3 +275,27 @@ body {
   font-size: 1.2rem;
   color: var(--secondary);
 }
+
+/* Add to App.css */
+
+/* Badges */
+.badge {
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+.badge-available { background-color: #03dac6; color: black; }
+.badge-soldout { background-color: #cf6679; color: white; }
+
+/* Tabs */
+.tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+.tab-btn {
+  background: #333; color: white; border: none; padding: 10px 20px; cursor: pointer;
+}
+.tab-btn.active { background: var(--primary); color: black; }
+
+/* Dashboard Grid */
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+.stat-card { background: #333; padding: 20px; border-radius: 8px; text-align: center; }
+.stat-number { font-size: 2rem; color: var(--secondary); font-weight: bold; }
