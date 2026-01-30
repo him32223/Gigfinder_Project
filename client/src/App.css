@@ -210,3 +210,68 @@ body {
   from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* --- ADMIN PANEL --- */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: var(--card-bg);
+}
+
+.admin-table th, .admin-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.admin-table th {
+  color: var(--primary);
+}
+
+.suspend-input {
+  background: #333;
+  border: 1px solid #555;
+  color: white;
+  padding: 5px;
+  width: 60px;
+  margin-right: 10px;
+  border-radius: 4px;
+}
+
+.btn-danger {
+  background-color: #cf6679;
+  border: none;
+  padding: 8px 12px;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background-color: #b00020;
+}
+
+/* --- PRICE DISPLAY --- */
+.price-calculation {
+  background-color: #333;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+  text-align: left;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.total-row {
+  border-top: 1px solid #555;
+  padding-top: 10px;
+  margin-top: 10px;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: var(--secondary);
+}

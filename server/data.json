@@ -1,19 +1,43 @@
 {
   "users": [
     {
-      "id": 1769785768728,
+      "id": 1,
+      "email": "admin@gigfinder.com",
+      "password": "admin",
+      "role": "admin",
+      "suspensionEnd": null
+    },
+    {
+      "id": 2,
+      "email": "user@test.com",
+      "password": "123",
+      "role": "user",
+      "suspensionEnd": null
+    },
+    {
+      "id": 1769786114227,
       "email": "bryan@gmail.com",
-      "password": "bryan"
+      "password": "bryan",
+      "role": "user",
+      "suspensionEnd": "2026-02-01T15:15:22.893Z"
+    },
+    {
+      "id": 1769786135738,
+      "email": "bryan123@gmail.com",
+      "password": "bryan",
+      "role": "user",
+      "suspensionEnd": null
     }
   ],
   "bookings": [
     {
-      "id": 1769785777746,
+      "id": 1769786169430,
       "eventId": 2,
       "eventName": "Coldplay",
-      "user": "bryan@gmail.com",
-      "quantity": "3",
-      "date": "2026-01-30T15:09:37.746Z"
+      "user": "bryan123@gmail.com",
+      "quantity": 4,
+      "totalPrice": 1200,
+      "date": "2026-01-30T15:16:09.430Z"
     }
   ]
 }

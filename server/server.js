@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs'); // Module to read/write files
+const fs = require('fs');
 const app = express();
 const PORT = 5000;
 
@@ -10,22 +10,20 @@ app.use(express.json());
 const DATA_FILE = './data.json';
 
 // --- HELPER FUNCTIONS ---
-// Read data from file
 const readData = () => {
     try {
         const data = fs.readFileSync(DATA_FILE);
         return JSON.parse(data);
     } catch (error) {
-        return { users: [], bookings: [] }; // Fallback if file fails
+        return { users: [], bookings: [] };
     }
 };
 
-// Write data to file
 const writeData = (data) => {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 };
 
-// --- EVENTS DATA (Static for now) ---
+// --- STATIC EVENTS ---
 const events = [
     { id: 1, name: "The Midnight", date: "2026-02-14", venue: "KL Live", price: 150, image: "https://placehold.co/400" },
     { id: 2, name: "Coldplay", date: "2026-03-01", venue: "Bukit Jalil", price: 300, image: "https://placehold.co/400" },
@@ -34,9 +32,7 @@ const events = [
 
 // --- ROUTES ---
 
-app.get('/api/events', (req, res) => {
-    res.json(events);
-});
+app.get('/api/events', (req, res) => res.json(events));
 
 app.get('/api/events/search', (req, res) => {
     const query = req.query.q.toLowerCase();
@@ -47,6 +43,7 @@ app.get('/api/events/search', (req, res) => {
     res.json(results);
 });
 
+// Register
 app.post('/api/register', (req, res) => {
     const { email, password } = req.body;
     const db = readData();
@@ -55,27 +52,47 @@ app.post('/api/register', (req, res) => {
         return res.status(400).json({ message: "User already exists" });
     }
 
-    const newUser = { id: Date.now(), email, password };
+    const newUser = { 
+        id: Date.now(), 
+        email, 
+        password, 
+        role: 'user', // Default role
+        suspensionEnd: null 
+    };
     db.users.push(newUser);
-    writeData(db); // SAVE TO FILE
+    writeData(db);
 
     res.status(201).json({ message: "Registration Successful!", user: newUser });
 });
 
+// Login (With Suspension Check)
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
     const db = readData();
     const user = db.users.find(u => u.email === email && u.password === password);
 
     if (user) {
+        // Check Suspension
+        if (user.suspensionEnd) {
+            const now = new Date();
+            const end = new Date(user.suspensionEnd);
+            if (now < end) {
+                return res.status(403).json({ message: `Account suspended until ${end.toLocaleDateString()}` });
+            } else {
+                // Suspension expired, remove it
+                user.suspensionEnd = null;
+                writeData(db);
+            }
+        }
         res.json({ message: "Login successful", user });
     } else {
         res.status(401).json({ message: "Invalid credentials" });
     }
 });
 
+// Booking
 app.post('/api/book', (req, res) => {
-    const { eventId, user, quantity, eventName } = req.body;
+    const { eventId, user, quantity, eventName, totalPrice } = req.body;
     const db = readData();
 
     const newBooking = { 
@@ -84,13 +101,41 @@ app.post('/api/book', (req, res) => {
         eventName, 
         user, 
         quantity, 
+        totalPrice,
         date: new Date().toISOString() 
     };
     
     db.bookings.push(newBooking);
-    writeData(db); // SAVE TO FILE
+    writeData(db);
 
     res.status(201).json({ message: "Booking Confirmed!", booking: newBooking });
+});
+
+// --- ADMIN ROUTES ---
+
+// Get All Users
+app.get('/api/admin/users', (req, res) => {
+    const db = readData();
+    // Return everyone except admins
+    const users = db.users.filter(u => u.role !== 'admin');
+    res.json(users);
+});
+
+// Suspend User
+app.post('/api/admin/suspend', (req, res) => {
+    const { userId, days } = req.body;
+    const db = readData();
+    
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + parseInt(days));
+    
+    user.suspensionEnd = endDate.toISOString();
+    writeData(db);
+
+    res.json({ message: `User suspended for ${days} days.` });
 });
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

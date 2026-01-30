@@ -3,7 +3,7 @@ import './App.css';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [view, setView] = useState('login');
+  const [view, setView] = useState('login'); // 'login', 'register', 'home', 'admin'
   
   // Form States
   const [email, setEmail] = useState('');
@@ -11,6 +11,7 @@ function App() {
   
   // Data States
   const [events, setEvents] = useState([]);
+  const [usersList, setUsersList] = useState([]); // For Admin
   const [searchTerm, setSearchTerm] = useState('');
 
   // --- MODAL STATE ---
@@ -24,6 +25,12 @@ function App() {
     setEvents(data);
   };
 
+  const fetchUsers = async () => {
+      const res = await fetch('http://localhost:5000/api/admin/users');
+      const data = await res.json();
+      setUsersList(data);
+  }
+
   const handleRegister = async (e) => {
     e.preventDefault();
     const res = await fetch('http://localhost:5000/api/register', {
@@ -34,7 +41,6 @@ function App() {
     const data = await res.json();
     
     if (res.ok) {
-        // Show Success Modal instead of Alert
         setModal({ show: true, title: 'Success! 🎉', message: 'Account created. Please log in.', type: 'success' });
         setView('login');
     } else {
@@ -53,8 +59,13 @@ function App() {
     
     if (res.ok) {
         setUser(data.user);
-        setView('home');
-        fetchEvents();
+        if (data.user.role === 'admin') {
+            setView('admin');
+            fetchUsers();
+        } else {
+            setView('home');
+            fetchEvents();
+        }
     } else {
         setModal({ show: true, title: 'Login Failed ⚠️', message: data.message, type: 'error' });
     }
@@ -68,15 +79,27 @@ function App() {
     setEvents(data);
   };
 
+  const handleSuspend = async (userId, days) => {
+      if(!days) return alert("Enter days");
+      const res = await fetch('http://localhost:5000/api/admin/suspend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, days })
+      });
+      const data = await res.json();
+      alert(data.message);
+      fetchUsers(); // Refresh list
+  }
+
   // --- BOOKING LOGIC ---
   
-  // 1. Open Booking Modal
   const openBookingModal = (event) => {
       setBookingModal({ show: true, event: event, quantity: 1 });
   };
 
-  // 2. Confirm Booking
   const confirmBooking = async () => {
+    const totalPrice = bookingModal.event.price * bookingModal.quantity;
+
     const res = await fetch('http://localhost:5000/api/book', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -84,15 +107,13 @@ function App() {
           eventId: bookingModal.event.id, 
           eventName: bookingModal.event.name,
           quantity: bookingModal.quantity, 
+          totalPrice: totalPrice,
           user: user.email 
       })
     });
     
-    // Close booking modal
     setBookingModal({ show: false, event: null, quantity: 1 });
-
-    // Show Success Modal
-    setModal({ show: true, title: 'Booking Confirmed! 🎟️', message: 'Your tickets have been sent to your email.', type: 'success' });
+    setModal({ show: true, title: 'Booking Confirmed! 🎟️', message: `Total Paid: RM${totalPrice}. Tickets sent to email.`, type: 'success' });
   };
 
   const closeModal = () => setModal({ ...modal, show: false });
@@ -114,6 +135,8 @@ function App() {
 
   const BookingPopup = () => {
       if (!bookingModal.show) return null;
+      const total = bookingModal.event.price * bookingModal.quantity;
+
       return (
           <div className="modal-overlay">
               <div className="modal-content">
@@ -128,18 +151,73 @@ function App() {
                         max="10"
                         className="auth-input"
                         value={bookingModal.quantity}
-                        onChange={(e) => setBookingModal({...bookingModal, quantity: e.target.value})}
+                        onChange={(e) => setBookingModal({...bookingModal, quantity: parseInt(e.target.value) || 1})}
                     />
                   </div>
 
+                  {/* DYNAMIC PRICE DISPLAY */}
+                  <div className="price-calculation">
+                      <div className="price-row">
+                          <span>Price per ticket:</span>
+                          <span>RM{bookingModal.event.price}</span>
+                      </div>
+                      <div className="price-row total-row">
+                          <span>Total:</span>
+                          <span>RM{total}</span>
+                      </div>
+                  </div>
+
                   <div className="modal-actions">
-                    <button className="btn-secondary" onClick={() => setBookingModal({show: false})}>Cancel</button>
-                    <button className="book-btn" style={{marginTop: 0}} onClick={confirmBooking}>Confirm</button>
+                    <button className="btn-secondary" onClick={() => setBookingModal({show: false, event: null, quantity: 1})}>Cancel</button>
+                    <button className="book-btn" style={{marginTop: 0}} onClick={confirmBooking}>Pay RM{total}</button>
                   </div>
               </div>
           </div>
       );
   };
+
+  const AdminDashboard = () => {
+      return (
+          <div className="app-container">
+               <nav className="navbar">
+                    <div className="logo">GigFinder <span style={{fontSize:'0.8rem', color: 'red'}}>ADMIN</span></div>
+                    <button className="nav-btn" onClick={() => { setUser(null); setView('login'); }}>Logout</button>
+              </nav>
+              <h1>User Management</h1>
+              <table className="admin-table">
+                  <thead>
+                      <tr>
+                          <th>User Email</th>
+                          <th>Status</th>
+                          <th>Action</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {usersList.map(u => (
+                          <tr key={u.id}>
+                              <td>{u.email}</td>
+                              <td style={{color: u.suspensionEnd ? 'red' : 'green'}}>
+                                  {u.suspensionEnd ? `Suspended until ${new Date(u.suspensionEnd).toLocaleDateString()}` : 'Active'}
+                              </td>
+                              <td>
+                                  <input type="number" placeholder="Days" id={`days-${u.id}`} className="suspend-input" />
+                                  <button 
+                                    className="btn-danger"
+                                    onClick={() => {
+                                        const days = document.getElementById(`days-${u.id}`).value;
+                                        handleSuspend(u.id, days);
+                                    }}
+                                  >
+                                      Suspend
+                                  </button>
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
+      )
+  }
 
   // --- MAIN RENDER ---
 
@@ -168,6 +246,15 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  if (view === 'admin') {
+      return (
+        <>
+            <NotificationModal />
+            <AdminDashboard />
+        </>
+      )
   }
 
   return (
