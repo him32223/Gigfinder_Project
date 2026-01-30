@@ -1,38 +1,151 @@
-.App {
+:root {
+  --bg-color: #121212;
+  --card-bg: #1e1e1e;
+  --primary: #bb86fc;
+  --secondary: #03dac6;
+  --text: #ffffff;
+  --text-muted: #b0b0b0;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #333;
+  margin-bottom: 2rem;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary);
+  letter-spacing: 2px;
+}
+
+.nav-btn {
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.nav-btn:hover {
+  background: var(--primary);
+  color: #000;
+}
+
+/* Auth Screen */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+}
+
+.auth-card {
+  background-color: var(--card-bg);
+  padding: 2rem;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+.auth-input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  background: #333;
+  border: 1px solid #444;
   color: white;
+  border-radius: 4px;
+  box-sizing: border-box; /* Fixes padding width issues */
 }
 
-.App-link {
-  color: #61dafb;
+/* Events Grid */
+.search-bar {
+  width: 100%;
+  padding: 15px;
+  border-radius: 8px;
+  border: none;
+  background: #333;
+  color: white;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.event-card {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.event-card:hover {
+  transform: translateY(-5px);
+}
+
+.card-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+.card-title {
+  margin: 0 0 10px 0;
+  color: var(--primary);
+}
+
+.card-info {
+  color: var(--text-muted);
+  margin: 5px 0;
+  font-size: 0.9rem;
+}
+
+.book-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 15px;
+  background-color: var(--secondary);
+  border: none;
+  border-radius: 4px;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.book-btn:hover {
+  opacity: 0.9;
 }

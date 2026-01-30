@@ -55,6 +55,36 @@ app.post('/api/book', (req, res) => {
     res.status(201).json({ message: "Booking Confirmed!", booking: newBooking });
 });
 
+// --- MOCK USERS (In-memory storage) ---
+let users = [];
+
+// Feature 4: User Registration
+app.post('/api/register', (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({message: "Missing fields"});
+    
+    // Check if user exists
+    if(users.find(u => u.email === email)) {
+        return res.status(400).json({message: "User already exists"});
+    }
+
+    const newUser = { id: users.length + 1, email, password };
+    users.push(newUser);
+    res.status(201).json({ message: "User registered!", user: newUser });
+});
+
+// Feature 5: User Login
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
+    const user = users.find(u => u.email === email && u.password === password);
+    
+    if (user) {
+        res.json({ message: "Login successful", user });
+    } else {
+        res.status(401).json({ message: "Invalid credentials" });
+    }
+});
+
 // Start Server
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
