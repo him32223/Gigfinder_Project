@@ -45,7 +45,7 @@
       "image": "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=1000",
       "venueImage": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Bukit_Jalil_National_Stadium_2017.jpg",
       "capacity": 5000,
-      "sold": 1200
+      "sold": 1196
     },
     {
       "id": 3,
@@ -58,27 +58,67 @@
       "venueImage": "https://images.unsplash.com/photo-1583244532610-2a234e7c3eca?q=80&w=1000",
       "capacity": 50,
       "sold": 10
+    },
+    {
+      "id": 1769855346625,
+      "name": "dd",
+      "venue": "dd",
+      "date": "2026-01-02",
+      "price": 2,
+      "capacity": 2,
+      "image": "https://placehold.co/400",
+      "sold": 0
+    },
+    {
+      "id": 1769856117178,
+      "name": "dd",
+      "venue": "dd",
+      "date": "2026-02-17",
+      "price": 4,
+      "capacity": 4,
+      "venueDesc": "dd",
+      "image": "/images/band.jpg",
+      "venueImage": " /images/venue.jpg",
+      "sold": 0
+    },
+    {
+      "id": 1769856145035,
+      "name": "dd",
+      "venue": "dd",
+      "date": "2026-01-05",
+      "price": 3,
+      "capacity": -2,
+      "venueDesc": "dd",
+      "image": "https://placehold.co/400",
+      "venueImage": "https://placehold.co/400",
+      "sold": 0
+    },
+    {
+      "id": 1769856579583,
+      "name": "CoLD SToRAGE",
+      "venue": "dadad",
+      "date": "2026-02-13",
+      "price": 11,
+      "capacity": 11,
+      "venueDesc": "",
+      "image": "/images/image-1770736302439.pdf",
+      "venueImage": "/images/image-1770311566661.pdf",
+      "sold": 0
+    },
+    {
+      "id": 1769857402885,
+      "name": "The Wanted",
+      "venue": "dd",
+      "date": "2026-01-12",
+      "price": 111,
+      "capacity": 11,
+      "venueDesc": "dd",
+      "image": "http://localhost:5000/uploads/image-1769962054357.jpg",
+      "venueImage": "http://localhost:5000/uploads/image-1770298726687.jpg",
+      "sold": 0
     }
   ],
   "bookings": [
-    {
-      "id": 1769852751413,
-      "eventId": 2,
-      "eventName": "Coldplay: Music of Spheres",
-      "user": "bryan123@gmail.com",
-      "quantity": 3,
-      "totalPrice": 900,
-      "date": "2026-01-31T09:45:51.413Z"
-    },
-    {
-      "id": 1769854293660,
-      "eventId": 2,
-      "eventName": "Coldplay: Music of Spheres",
-      "user": "bryan123@gmail.com",
-      "quantity": 1,
-      "totalPrice": 300,
-      "date": "2026-01-31T10:11:33.660Z"
-    },
     {
       "id": 1769854552660,
       "eventId": 2,
