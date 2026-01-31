@@ -28,10 +28,10 @@
       "name": "The Midnight",
       "date": "2026-02-14",
       "venue": "KL Live",
-      "venueDesc": "A premier live music venue in the heart of Kuala Lumpur, known for its intimate atmosphere and state-of-the-art sound system.",
+      "venueDesc": "Synthwave legends return to KL for a neon-soaked night.",
       "price": 150,
       "image": "https://images.unsplash.com/photo-1574391884720-3850ea71e83f?q=80&w=1000",
-      "venueImage": "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?q=80&w=1000",
+      "venueImage": "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1000",
       "capacity": 100,
       "sold": 85
     },
@@ -40,22 +40,22 @@
       "name": "Coldplay: Music of Spheres",
       "date": "2026-03-01",
       "venue": "Bukit Jalil National Stadium",
-      "venueDesc": "The largest stadium in Southeast Asia. Expect a massive production with pyrotechnics and LED wristbands for all attendees.",
+      "venueDesc": "A massive stadium production with fireworks and LED wristbands.",
       "price": 300,
       "image": "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=1000",
       "venueImage": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Bukit_Jalil_National_Stadium_2017.jpg",
       "capacity": 5000,
-      "sold": 1205
+      "sold": 1200
     },
     {
       "id": 3,
       "name": "Local Indie Night",
       "date": "2026-02-20",
       "venue": "Merdekarya",
-      "venueDesc": "A cozy, grassroots venue supporting the local Malaysian independent music scene. Food and drinks available.",
+      "venueDesc": "Support local talent at this cozy, grassroots venue.",
       "price": 35,
       "image": "https://images.unsplash.com/photo-1514525253440-b393452e8d26?q=80&w=1000",
-      "venueImage": "https://images.unsplash.com/photo-1563841930606-67e26ce48b46?q=80&w=1000",
+      "venueImage": "https://images.unsplash.com/photo-1583244532610-2a234e7c3eca?q=80&w=1000",
       "capacity": 50,
       "sold": 10
     }
@@ -71,22 +71,22 @@
       "date": "2026-01-31T09:45:51.413Z"
     },
     {
-      "id": 1769852774591,
+      "id": 1769854293660,
       "eventId": 2,
       "eventName": "Coldplay: Music of Spheres",
       "user": "bryan123@gmail.com",
       "quantity": 1,
       "totalPrice": 300,
-      "date": "2026-01-31T09:46:14.591Z"
+      "date": "2026-01-31T10:11:33.660Z"
     },
     {
-      "id": 1769853381862,
+      "id": 1769854552660,
       "eventId": 2,
       "eventName": "Coldplay: Music of Spheres",
       "user": "bryan123@gmail.com",
       "quantity": 1,
       "totalPrice": 300,
-      "date": "2026-01-31T09:56:21.862Z"
+      "date": "2026-01-31T10:15:52.660Z"
     }
   ]
 }

@@ -48,6 +48,7 @@ function App() {
 
   useEffect(() => {
       if (view === 'home') fetchEvents();
+      if (view === 'mytickets') fetchMyTickets();
   }, [view]);
 
   const handleRegister = async (e) => {
@@ -205,7 +206,7 @@ function App() {
   };
 
   const MyTicketsView = () => {
-      useEffect(() => { fetchMyTickets(); }, []);
+      
       return (
           <div className="app-container">
               <nav className="navbar">
@@ -361,9 +362,34 @@ function App() {
         </div>
       </nav>
 
-      <input className="search-bar" placeholder="Search..." onChange={e => {
-          fetch(`http://localhost:5000/api/events/search?q=${e.target.value}`).then(res=>res.json()).then(setEvents);
-      }} />
+      <div className="search-container" style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
+        <input 
+            className="search-bar" 
+            style={{flex: 1, margin: 0}}
+            placeholder="🔍 Search for artists..." 
+            onChange={e => {
+                fetch(`http://localhost:5000/api/events/search?q=${e.target.value}`).then(res=>res.json()).then(setEvents);
+            }} 
+        />
+        <select 
+            className="auth-input" 
+            style={{width: '200px', margin: 0}}
+            onChange={(e) => {
+                const sortType = e.target.value;
+                const sorted = [...events].sort((a, b) => {
+                    if(sortType === 'price-low') return a.price - b.price;
+                    if(sortType === 'price-high') return b.price - a.price;
+                    if(sortType === 'date') return new Date(a.date) - new Date(b.date);
+                    return 0;
+                });
+                setEvents(sorted);
+            }}
+        >
+            <option value="date">📅 Date (Earliest)</option>
+            <option value="price-low">💰 Price (Low to High)</option>
+            <option value="price-high">💎 Price (High to Low)</option>
+        </select>
+      </div>
 
       <div className="events-grid">
         {events.map(e => {
