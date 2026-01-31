@@ -16,11 +16,30 @@ function App() {
   const [modal, setModal] = useState({ show: false, title: '', message: '', type: '' });
   const [bookingModal, setBookingModal] = useState({ show: false, event: null, quantity: 1 });
 
+  // --- 1. NAVIGATION FIX (Browser Back Button) ---
+  
+  // Update the URL hash whenever the View changes
+  useEffect(() => {
+    window.location.hash = view;
+  }, [view]);
+
+  // Listen for Browser Back Button clicks
+  useEffect(() => {
+    const handleHashChange = () => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash) setView(hash);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   // --- API CALLS ---
   const fetchEvents = async () => {
-    const res = await fetch('http://localhost:5000/api/events');
-    const data = await res.json();
-    setEvents(data);
+    try {
+        const res = await fetch('http://localhost:5000/api/events');
+        const data = await res.json();
+        setEvents(data);
+    } catch (e) { console.error("API Error", e); }
   };
 
   const fetchMyTickets = async () => {
@@ -29,6 +48,11 @@ function App() {
       const data = await res.json();
       setMyTickets(data);
   };
+
+  // Feature: Auto-load data when switching to Home
+  useEffect(() => {
+      if (view === 'home') fetchEvents();
+  }, [view]);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -47,7 +71,6 @@ function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Submitting Login Form...", { email }); // <--- LOG
     const res = await fetch('http://localhost:5000/api/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -55,8 +78,9 @@ function App() {
     const data = await res.json();
     if (res.ok) {
         setUser(data.user);
+        // Admin goes to admin view, User goes to home
         if (data.user.role === 'admin') setView('admin');
-        else { setView('home'); fetchEvents(); }
+        else setView('home');
     } else {
         setModal({ show: true, title: 'Login Failed', message: data.message, type: 'error' });
     }
@@ -87,8 +111,7 @@ function App() {
       if(!window.confirm("Cancel this ticket?")) return;
       await fetch(`http://localhost:5000/api/bookings/${id}`, { method: 'DELETE' });
       fetchMyTickets();
-      fetchEvents(); // Refresh inventory
-      alert("Ticket Cancelled");
+      fetchEvents(); 
   }
 
   // --- SUB-COMPONENTS ---
@@ -97,8 +120,12 @@ function App() {
       useEffect(() => { fetchMyTickets(); }, []);
       return (
           <div className="app-container">
-              <h2>My Tickets</h2>
-              <button className="btn-secondary" onClick={() => setView('home')}>Back to Events</button>
+              <nav className="navbar">
+                <div className="logo">My Tickets</div>
+                {/* 2. NAVIGATION FIX: Explicit Home Button */}
+                <button className="nav-btn" onClick={() => setView('home')}>← Back to Events</button>
+              </nav>
+
               <div className="events-grid" style={{marginTop: '20px'}}>
                   {myTickets.length === 0 ? <p>No tickets yet.</p> : myTickets.map(t => (
                       <div key={t.id} className="event-card" style={{padding: '20px'}}>
@@ -120,8 +147,8 @@ function App() {
       const [newEvent, setNewEvent] = useState({ name: '', venue: '', date: '', price: '', capacity: '', image: 'https://placehold.co/400' });
 
       useEffect(() => {
-          fetch('http://localhost:5000/api/admin/users').then(res => res.json()).then(setUsers);
-          fetch('http://localhost:5000/api/admin/stats').then(res => res.json()).then(setStats);
+          if (tab === 'users') fetch('http://localhost:5000/api/admin/users').then(res => res.json()).then(setUsers);
+          if (tab === 'stats') fetch('http://localhost:5000/api/admin/stats').then(res => res.json()).then(setStats);
       }, [tab]);
 
       const handleAddEvent = async (e) => {
@@ -142,6 +169,8 @@ function App() {
                 body: JSON.stringify({ userId: id, days })
             });
             alert("User Suspended");
+            // Refresh users
+            fetch('http://localhost:5000/api/admin/users').then(res => res.json()).then(setUsers);
           }
       }
 
@@ -149,7 +178,15 @@ function App() {
 
       return (
           <div className="app-container">
-              <h1>Admin Dashboard</h1>
+              <nav className="navbar">
+                    <div className="logo">GigFinder <span style={{fontSize:'0.8rem', color: 'red'}}>ADMIN</span></div>
+                    <div style={{display:'flex', gap:'10px'}}>
+                        {/* 3. NAVIGATION FIX: Admin can go Home */}
+                        <button className="nav-btn" onClick={() => setView('home')}>View Site</button>
+                        <button className="nav-btn" onClick={() => { setUser(null); setView('login'); }}>Logout</button>
+                    </div>
+              </nav>
+              
               <div className="tabs">
                   <button className={`tab-btn ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>Users</button>
                   <button className={`tab-btn ${tab === 'stats' ? 'active' : ''}`} onClick={() => setTab('stats')}>Sales Analytics</button>
@@ -240,6 +277,7 @@ function App() {
       <nav className="navbar">
         <div className="logo">GigFinder</div>
         <div style={{display:'flex', gap:'15px'}}>
+            {user?.role === 'admin' && <button className="nav-btn" onClick={() => setView('admin')}>Admin Dashboard</button>}
             <button className="nav-btn" onClick={() => setView('mytickets')}>My Tickets</button>
             <button className="nav-btn" onClick={() => {setUser(null); setView('login')}}>Logout</button>
         </div>
