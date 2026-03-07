@@ -20,6 +20,13 @@
       "password": "bryan",
       "role": "user",
       "suspensionEnd": null
+    },
+    {
+      "id": 1772874039693,
+      "email": "bryandenetto26@gmail.com",
+      "password": "123",
+      "role": "user",
+      "suspensionEnd": null
     }
   ],
   "events": [
@@ -33,7 +40,7 @@
       "image": "https://images.unsplash.com/photo-1574391884720-3850ea71e83f?q=80&w=1000",
       "venueImage": "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1000",
       "capacity": 100,
-      "sold": 85
+      "sold": 86
     },
     {
       "id": 2,
@@ -103,7 +110,7 @@
       "venueDesc": "",
       "image": "/images/image-1770736302439.pdf",
       "venueImage": "/images/image-1770311566661.pdf",
-      "sold": 0
+      "sold": 1
     },
     {
       "id": 1769857402885,
@@ -116,6 +123,18 @@
       "image": "http://localhost:5000/uploads/image-1769962054357.jpg",
       "venueImage": "http://localhost:5000/uploads/image-1770298726687.jpg",
       "sold": 0
+    },
+    {
+      "id": 1772874067847,
+      "name": "dd",
+      "venue": "dd",
+      "date": "2026-03-30",
+      "price": 1,
+      "capacity": 11111,
+      "venueDesc": "dd",
+      "image": "https://placehold.co/400",
+      "venueImage": "https://placehold.co/400",
+      "sold": 1
     }
   ],
   "bookings": [
@@ -127,6 +146,33 @@
       "quantity": 1,
       "totalPrice": 300,
       "date": "2026-01-31T10:15:52.660Z"
+    },
+    {
+      "id": 1770217446301,
+      "eventId": 1769856579583,
+      "eventName": "CoLD SToRAGE",
+      "user": "bryan123@gmail.com",
+      "quantity": 1,
+      "totalPrice": 11,
+      "date": "2026-02-04T15:04:06.301Z"
+    },
+    {
+      "id": 1771834234651,
+      "eventId": 1,
+      "eventName": "Postman Automated Test Concert",
+      "user": "postman_test@wou.edu.my",
+      "quantity": 1,
+      "totalPrice": 150,
+      "date": "2026-02-23T08:10:34.651Z"
+    },
+    {
+      "id": 1772874082053,
+      "eventId": 1772874067847,
+      "eventName": "dd",
+      "user": "bryandenetto26@gmail.com",
+      "quantity": 1,
+      "totalPrice": 1,
+      "date": "2026-03-07T09:01:22.053Z"
     }
   ]
 }

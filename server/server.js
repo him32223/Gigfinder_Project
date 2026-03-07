@@ -1,10 +1,31 @@
+require('dotenv').config(); // Loads your .env file
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
-const multer = require('multer'); 
+const multer = require('multer');
 const path = require('path');
+const nodemailer = require('nodemailer'); 
+
 const app = express();
 const PORT = 5000;
+
+// --- EMAIL TRANSPORTER CONFIGURATION ---
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+// Test the email connection when server starts
+transporter.verify((error, success) => {
+    if (error) {
+        console.log("Email Config Error:", error);
+    } else {
+        console.log("📧 Server is ready to send real emails!");
+    }
+});
 
 app.use(cors());
 app.use(express.json());
@@ -22,10 +43,10 @@ app.use((req, res, next) => {
 
 const DATA_FILE = './data.json';
 
-// --- FILE UPLOAD CONFIGURATION (Saved to SERVER folder, not CLIENT) ---
+// --- FILE UPLOAD CONFIGURATION ---
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadPath = path.join(__dirname, 'uploads'); // Saved in server/uploads
+        const uploadPath = path.join(__dirname, 'uploads'); 
         if (!fs.existsSync(uploadPath)){
             fs.mkdirSync(uploadPath, { recursive: true });
         }
@@ -52,7 +73,7 @@ const readData = () => {
     try {
         return JSON.parse(fs.readFileSync(DATA_FILE));
     } catch (error) {
-        return { users: [], events: [], bookings: [] };
+        return { users: [], events:[], bookings:[] };
     }
 };
 const writeData = (data) => fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
@@ -65,7 +86,6 @@ app.post('/api/upload', (req, res) => {
         if (err) return res.status(400).json({ message: err.message });
         if (!req.file) return res.status(400).json({ message: "No file uploaded" });
         
-        // Return full URL from the server
         const imagePath = `http://localhost:5000/uploads/${req.file.filename}`;
         res.json({ imageUrl: imagePath });
     });
@@ -98,7 +118,7 @@ app.post('/api/login', (req, res) => {
     const user = db.users.find(u => u.email === email && u.password === password);
     if (user) {
         if (user.suspensionEnd && new Date() < new Date(user.suspensionEnd)) {
-            return res.status(403).json({ message: `Suspended until ${user.suspensionEnd}` });
+            return res.status(403).json({ message: `Suspended until ${new Date(user.suspensionEnd).toLocaleDateString()}` });
         }
         user.suspensionEnd = null;
         writeData(db);
@@ -106,18 +126,55 @@ app.post('/api/login', (req, res) => {
     } else res.status(401).json({ message: "Invalid credentials" });
 });
 
+// FIXED BOOKING ROUTE
 app.post('/api/book', (req, res) => {
     const { eventId, user, quantity, eventName, totalPrice } = req.body;
     const db = readData();
     const eventIndex = db.events.findIndex(e => e.id === eventId);
+    
     if (eventIndex === -1) return res.status(404).json({ message: "Event not found" });
     const event = db.events[eventIndex];
     if (event.sold + quantity > event.capacity) return res.status(400).json({ message: `Not enough tickets!` });
     
+    // 1. Update Database
     db.events[eventIndex].sold += quantity;
     const newBooking = { id: Date.now(), eventId, eventName, user, quantity, totalPrice, date: new Date().toISOString() };
     db.bookings.push(newBooking);
     writeData(db);
+    console.log(`Booking Confirmed: ID ${newBooking.id}`);
+
+    // 2. SEND REAL EMAIL
+    const mailOptions = {
+        from: `"GigFinder Tickets" <${process.env.EMAIL_USER}>`,
+        to: user, 
+        subject: `🎟️ Your Tickets for ${eventName} are Confirmed!`,
+        html: `
+            <div style="font-family: Arial, sans-serif; background-color: #121212; color: #ffffff; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto;">
+                <h1 style="color: #bb86fc; text-align: center;">GigFinder</h1>
+                <h2 style="color: #03dac6;">Booking Confirmed! 🎉</h2>
+                <p style="font-size: 16px;">Hi there,</p>
+                <p style="font-size: 16px;">You are officially going to see <strong>${eventName}</strong>.</p>
+                
+                <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 4px solid #bb86fc; margin: 20px 0;">
+                    <p><strong>Booking ID:</strong> #${newBooking.id}</p>
+                    <p><strong>Quantity:</strong> ${quantity} Ticket(s)</p>
+                    <p><strong>Total Paid:</strong> RM ${totalPrice}</p>
+                </div>
+                
+                <p style="color: #b0b0b0; font-size: 14px; text-align: center;">Keep this email safe. We will scan your QR code at the door.</p>
+            </div>
+        `
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error("Error sending email:", error);
+        } else {
+            console.log("Email sent successfully: " + info.response);
+        }
+    });
+
+    // 3. Respond to Frontend
     res.status(201).json({ message: "Booking Confirmed!", booking: newBooking });
 });
 
