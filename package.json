@@ -23,5 +23,8 @@
   "homepage": "https://github.com/him32223/Gigfinder_Project#readme",
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "mongoose": "^9.3.0"
   }
 }
