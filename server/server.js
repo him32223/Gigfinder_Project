@@ -1,221 +1,229 @@
-require('dotenv').config(); // Loads your .env file
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
-const nodemailer = require('nodemailer'); 
+const nodemailer = require('nodemailer');
+const mongoose = require('mongoose'); // NEW: Import Mongoose
+const fs = require('fs');
 
 const app = express();
 const PORT = 5000;
 
-// --- EMAIL TRANSPORTER CONFIGURATION ---
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-
-// Test the email connection when server starts
-transporter.verify((error, success) => {
-    if (error) {
-        console.log("Email Config Error:", error);
-    } else {
-        console.log("📧 Server is ready to send real emails!");
-    }
-});
-
 app.use(cors());
 app.use(express.json());
-
-// --- STATIC FOLDER CONFIGURATION ---
-// This allows the browser to see images at http://localhost:5000/uploads/filename.jpg
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- LOGGER ---
 app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} request to ${req.url}`);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     next(); 
 });
 
-const DATA_FILE = './data.json';
+// ==========================================
+// 1. MONGODB CONNECTION & SCHEMAS
+// ==========================================
+// Change this:
+// mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
 
-// --- FILE UPLOAD CONFIGURATION ---
+// To this (The simple, modern way):
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('✅ Connected to MongoDB Atlas!'))
+    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+
+// Define User Schema
+const User = mongoose.model('User', new mongoose.Schema({
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, default: 'user' },
+    suspensionEnd: { type: Date, default: null }
+}));
+
+// Define Event Schema
+const Event = mongoose.model('Event', new mongoose.Schema({
+    name: String,
+    date: String,
+    venue: String,
+    venueDesc: String,
+    price: Number,
+    capacity: Number,
+    sold: { type: Number, default: 0 },
+    image: String,
+    venueImage: String
+}));
+
+// Define Booking Schema
+const Booking = mongoose.model('Booking', new mongoose.Schema({
+    eventId: String,
+    eventName: String,
+    user: String,
+    quantity: Number,
+    totalPrice: Number,
+    date: { type: Date, default: Date.now }
+}));
+
+// ==========================================
+// 2. EMAIL & UPLOAD CONFIGURATION (Kept the same)
+// ==========================================
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+});
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = path.join(__dirname, 'uploads'); 
-        if (!fs.existsSync(uploadPath)){
-            fs.mkdirSync(uploadPath, { recursive: true });
-        }
+        if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
         cb(null, uploadPath);
     },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + '.jpg'); 
-    }
+    filename: (req, file, cb) => cb(null, file.fieldname + '-' + Date.now() + '.jpg')
 });
 
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') {
-        cb(null, true);
-    } else {
-        cb(new Error('Only .jpg or .jpeg files are allowed!'), false);
-    }
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') cb(null, true);
+    else cb(new Error('Only .jpg files allowed!'), false);
 };
+const upload = multer({ storage, fileFilter });
 
-const upload = multer({ storage: storage, fileFilter: fileFilter });
+// ==========================================
+// 3. API ROUTES (Rewritten for MongoDB)
+// ==========================================
 
-// --- HELPER FUNCTIONS ---
-const readData = () => {
-    try {
-        return JSON.parse(fs.readFileSync(DATA_FILE));
-    } catch (error) {
-        return { users: [], events:[], bookings:[] };
-    }
-};
-const writeData = (data) => fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+// Helper to format MongoDB _id to id for React
+const formatDoc = (doc) => ({ ...doc.toObject(), id: doc._id.toString() });
 
-// --- ROUTES ---
+// -- SEED ROUTE (Run this ONCE in browser to populate empty DB) --
+app.get('/api/seed', async (req, res) => {
+    await User.deleteMany({});
+    await Event.deleteMany({});
+    await Booking.deleteMany({});
+
+    await User.create({ email: 'admin@gigfinder.com', password: 'admin', role: 'admin' });
+    
+    await Event.create([
+        { name: "The Midnight", date: "2026-02-14", venue: "KL Live", venueDesc: "Synthwave legends return.", price: 150, capacity: 100, sold: 85, image: "https://images.unsplash.com/photo-1574391884720-3850ea71e83f?q=80&w=1000", venueImage: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1000" },
+        { name: "Coldplay", date: "2026-03-01", venue: "Bukit Jalil", venueDesc: "Massive stadium production.", price: 300, capacity: 5000, sold: 1200, image: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=1000", venueImage: "https://upload.wikimedia.org/wikipedia/commons/e/e6/Bukit_Jalil_National_Stadium_2017.jpg" }
+    ]);
+    res.json({ message: "Database seeded successfully! You can now log in." });
+});
 
 app.post('/api/upload', (req, res) => {
-    const uploadSingle = upload.single('image');
-    uploadSingle(req, res, (err) => {
+    upload.single('image')(req, res, (err) => {
         if (err) return res.status(400).json({ message: err.message });
         if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-        
-        const imagePath = `http://localhost:5000/uploads/${req.file.filename}`;
-        res.json({ imageUrl: imagePath });
+        res.json({ imageUrl: `http://localhost:5000/uploads/${req.file.filename}` });
     });
 });
 
-app.get('/api/events', (req, res) => res.json(readData().events));
-
-app.get('/api/events/search', (req, res) => {
-    const db = readData();
-    const query = req.query.q.toLowerCase();
-    const results = db.events.filter(e => 
-        e.name.toLowerCase().includes(query) || e.venue.toLowerCase().includes(query)
-    );
-    res.json(results);
+app.get('/api/events', async (req, res) => {
+    const events = await Event.find();
+    res.json(events.map(formatDoc));
 });
 
-app.post('/api/register', (req, res) => {
-    const { email, password } = req.body;
-    const db = readData();
-    if (db.users.find(u => u.email === email)) return res.status(400).json({ message: "User exists" });
-    const newUser = { id: Date.now(), email, password, role: 'user', suspensionEnd: null };
-    db.users.push(newUser);
-    writeData(db);
-    res.status(201).json({ message: "Registration Successful!", user: newUser });
+app.get('/api/events/search', async (req, res) => {
+    const query = req.query.q;
+    // MongoDB Regex Search (Finds text that contains the query, case-insensitive)
+    const events = await Event.find({
+        $or:[ { name: new RegExp(query, 'i') }, { venue: new RegExp(query, 'i') } ]
+    });
+    res.json(events.map(formatDoc));
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/register', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const existingUser = await User.findOne({ email });
+        if (existingUser) return res.status(400).json({ message: "User exists" });
+
+        const newUser = await User.create({ email, password });
+        res.status(201).json({ message: "Registration Successful!", user: formatDoc(newUser) });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
-    const db = readData();
-    const user = db.users.find(u => u.email === email && u.password === password);
+    const user = await User.findOne({ email, password });
+
     if (user) {
-        if (user.suspensionEnd && new Date() < new Date(user.suspensionEnd)) {
-            return res.status(403).json({ message: `Suspended until ${new Date(user.suspensionEnd).toLocaleDateString()}` });
+        if (user.suspensionEnd && new Date() < user.suspensionEnd) {
+            return res.status(403).json({ message: `Suspended until ${user.suspensionEnd.toLocaleDateString()}` });
         }
         user.suspensionEnd = null;
-        writeData(db);
-        res.json({ message: "Login successful", user });
+        await user.save();
+        res.json({ message: "Login successful", user: formatDoc(user) });
     } else res.status(401).json({ message: "Invalid credentials" });
 });
 
-// FIXED BOOKING ROUTE
-app.post('/api/book', (req, res) => {
+app.post('/api/book', async (req, res) => {
     const { eventId, user, quantity, eventName, totalPrice } = req.body;
-    const db = readData();
-    const eventIndex = db.events.findIndex(e => e.id === eventId);
     
-    if (eventIndex === -1) return res.status(404).json({ message: "Event not found" });
-    const event = db.events[eventIndex];
+    // Find Event in MongoDB by ID
+    const event = await Event.findById(eventId);
+    if (!event) return res.status(404).json({ message: "Event not found" });
     if (event.sold + quantity > event.capacity) return res.status(400).json({ message: `Not enough tickets!` });
     
-    // 1. Update Database
-    db.events[eventIndex].sold += quantity;
-    const newBooking = { id: Date.now(), eventId, eventName, user, quantity, totalPrice, date: new Date().toISOString() };
-    db.bookings.push(newBooking);
-    writeData(db);
-    console.log(`Booking Confirmed: ID ${newBooking.id}`);
+    // Update Inventory
+    event.sold += quantity;
+    await event.save();
 
-    // 2. SEND REAL EMAIL
+    // Create Booking
+    const newBooking = await Booking.create({ eventId, eventName, user, quantity, totalPrice });
+
+    // Send Email (Async)
     const mailOptions = {
         from: `"GigFinder Tickets" <${process.env.EMAIL_USER}>`,
         to: user, 
         subject: `🎟️ Your Tickets for ${eventName} are Confirmed!`,
-        html: `
-            <div style="font-family: Arial, sans-serif; background-color: #121212; color: #ffffff; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto;">
-                <h1 style="color: #bb86fc; text-align: center;">GigFinder</h1>
-                <h2 style="color: #03dac6;">Booking Confirmed! 🎉</h2>
-                <p style="font-size: 16px;">Hi there,</p>
-                <p style="font-size: 16px;">You are officially going to see <strong>${eventName}</strong>.</p>
-                
-                <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 4px solid #bb86fc; margin: 20px 0;">
-                    <p><strong>Booking ID:</strong> #${newBooking.id}</p>
-                    <p><strong>Quantity:</strong> ${quantity} Ticket(s)</p>
-                    <p><strong>Total Paid:</strong> RM ${totalPrice}</p>
-                </div>
-                
-                <p style="color: #b0b0b0; font-size: 14px; text-align: center;">Keep this email safe. We will scan your QR code at the door.</p>
-            </div>
-        `
+        html: `<h2>Booking Confirmed! 🎉</h2><p>Booking ID: #${newBooking._id}</p><p>Total: RM${totalPrice}</p>`
     };
+    transporter.sendMail(mailOptions).catch(console.error);
 
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.error("Error sending email:", error);
-        } else {
-            console.log("Email sent successfully: " + info.response);
-        }
-    });
-
-    // 3. Respond to Frontend
-    res.status(201).json({ message: "Booking Confirmed!", booking: newBooking });
+    res.status(201).json({ message: "Booking Confirmed!", booking: formatDoc(newBooking) });
 });
 
-app.get('/api/bookings/:email', (req, res) => res.json(readData().bookings.filter(b => b.user === req.params.email)));
+app.get('/api/bookings/:email', async (req, res) => {
+    const bookings = await Booking.find({ user: req.params.email });
+    res.json(bookings.map(formatDoc));
+});
 
-app.delete('/api/bookings/:id', (req, res) => {
-    const db = readData();
-    const id = parseInt(req.params.id); 
-    const idx = db.bookings.findIndex(b => b.id === id);
-    if (idx === -1) return res.status(404).json({ message: "Not found" });
-    const booking = db.bookings[idx];
-    const eventIdx = db.events.findIndex(e => e.id === booking.eventId);
-    if (eventIdx !== -1) {
-        db.events[eventIdx].sold -= booking.quantity;
+app.delete('/api/bookings/:id', async (req, res) => {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: "Not found" });
+    
+    const event = await Event.findById(booking.eventId);
+    if (event) {
+        event.sold -= booking.quantity;
+        if(event.sold < 0) event.sold = 0;
+        await event.save();
     }
-    db.bookings.splice(idx, 1);
-    writeData(db);
+    
+    await Booking.findByIdAndDelete(req.params.id);
     res.json({ message: "Cancelled" });
 });
 
-app.get('/api/admin/users', (req, res) => res.json(readData().users.filter(u => u.role !== 'admin')));
+app.get('/api/admin/users', async (req, res) => {
+    const users = await User.find({ role: { $ne: 'admin' } });
+    res.json(users.map(formatDoc));
+});
 
-app.post('/api/admin/suspend', (req, res) => {
-    const db = readData();
-    const user = db.users.find(u => u.id === req.body.userId);
+app.post('/api/admin/suspend', async (req, res) => {
+    const user = await User.findById(req.body.userId);
     if (user) {
         const d = new Date(); d.setDate(d.getDate() + parseInt(req.body.days));
-        user.suspensionEnd = d.toISOString();
-        writeData(db);
+        user.suspensionEnd = d;
+        await user.save();
         res.json({ message: "User suspended" });
     }
 });
 
-app.post('/api/admin/events', (req, res) => {
-    const db = readData();
-    const newEvent = { id: Date.now(), ...req.body, sold: 0 };
-    db.events.push(newEvent);
-    writeData(db);
+app.post('/api/admin/events', async (req, res) => {
+    await Event.create({ ...req.body, sold: 0 });
     res.json({ message: "Event Created" });
 });
 
-app.get('/api/admin/stats', (req, res) => res.json(readData().bookings));
+app.get('/api/admin/stats', async (req, res) => {
+    const bookings = await Booking.find();
+    res.json(bookings.map(formatDoc));
+});
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
