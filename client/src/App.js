@@ -372,6 +372,39 @@ function App() {
       if(sortBy === 'date') return new Date(a.date) - new Date(b.date);
       return 0;
   });
+  const ChatBot = () => {
+      const [isOpen, setIsOpen] = useState(false);
+      const [msg, setMsg] = useState('');
+      const [chat, setChat] = useState([]);
+
+      const sendChat = async () => {
+          setChat([...chat, {from: 'user', text: msg}]);
+          const res = await fetch('http://localhost:5000/api/chat', {
+              method: 'POST', headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ prompt: msg })
+          });
+          const data = await res.json();
+          setChat(prev => [...prev, {from: 'bot', text: data.response}]);
+          setMsg('');
+      };
+
+      return (
+          <div style={{position:'fixed', bottom:'20px', right:'20px', zIndex:999}}>
+              {isOpen && (
+                  <div style={{width:'300px', height:'400px', background:'#1e1e1e', border:'1px solid #bb86fc', borderRadius:'8px', display:'flex', flexDirection:'column'}}>
+                      <div style={{padding:'10px', background:'#bb86fc', color:'#000'}}>GigBot</div>
+                      <div style={{flex:1, padding:'10px', overflowY:'scroll'}}>
+                          {chat.map((c, i) => <p key={i} style={{textAlign: c.from==='user'?'right':'left', color: c.from==='user'?'#fff':'#03dac6'}}>{c.text}</p>)}
+                      </div>
+                      <div style={{padding:'10px'}}>
+                          <input className="auth-input" value={msg} onChange={e=>setMsg(e.target.value)} onKeyPress={e=>e.key==='Enter' && sendChat()} />
+                      </div>
+                  </div>
+              )}
+              <button className="book-btn" style={{width:'60px', height:'60px', borderRadius:'50%'}} onClick={()=>setIsOpen(!isOpen)}>💬</button>
+          </div>
+      );
+  }
 
   return (
     <div className="app-container">
@@ -432,7 +465,9 @@ function App() {
             </div>
           </>
       )}
+      <ChatBot />
     </div>
+    
   );
 }
 

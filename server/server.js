@@ -226,4 +226,42 @@ app.get('/api/admin/stats', async (req, res) => {
     res.json(bookings.map(formatDoc));
 });
 
+// ==========================================
+// 4. GEMINI AI CHATBOT ROUTE
+// ==========================================
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+// Initialize Gemini (Make sure GEMINI_API_KEY is in your .env file)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+app.post('/api/chat', async (req, res) => {
+    try {
+        const { prompt } = req.body;
+        
+        // 1. Fetch live events directly from MongoDB Atlas!
+        const events = await Event.find(); 
+        
+        // 2. Convert database events into a readable string for the AI
+        const eventContext = events.map(e => `${e.name} at ${e.venue} on ${e.date} for RM${e.price}`).join(" | ");
+        
+        // 3. Set up the AI Prompt
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        const fullPrompt = `You are a helpful concert assistant for GigFinder. 
+        Here are our live, upcoming events: ${eventContext}. 
+        User asked: "${prompt}". 
+        Please keep answers short, friendly, and only recommend concerts from the list provided.`;
+
+        // 4. Ask Gemini and return the response
+        const result = await model.generateContent(fullPrompt);
+        res.json({ response: result.response.text() });
+        
+    } catch (e) {
+        console.error("Gemini Error:", e);
+        res.status(500).json({ response: "Sorry, my AI brain is sleeping right now. Try again later!" });
+    }
+});
+
+
+
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
