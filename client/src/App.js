@@ -172,55 +172,164 @@ function App() {
   }
 
   // --- COMPONENTS ---
-
+  // --- NEW: Booking Popup with Interactive Seat Selection & Dynamic Pricing ---
   const BookingPopup = () => {
       const [step, setStep] = useState(1);
       const [paymentMethod, setPaymentMethod] = useState('');
-      const [isProcessing, setIsProcessing] = useState(false);
+      const[isProcessing, setIsProcessing] = useState(false);
+      
+      // NEW: State for interactive seating
+      const[selectedSeats, setSelectedSeats] = useState([]);
       
       useEffect(() => {
-          if (bookingModal.show) { setStep(1); setPaymentMethod(''); setIsProcessing(false); }
+          if (bookingModal.show) { 
+              setStep(1); 
+              setPaymentMethod(''); 
+              setIsProcessing(false); 
+              setSelectedSeats([]); // Clear seats on open
+          }
       }, [bookingModal.show]);
 
       if (!bookingModal.show) return null;
-      const total = bookingModal.event.price * bookingModal.quantity;
+
+      // --- DYNAMIC PRICING LOGIC ---
+      const basePrice = bookingModal.event.price;
+      const vipPrice = basePrice * 2; // VIP costs double!
+
+      // Calculate total based on which seats are selected
+      const calculateTotal = () => {
+          let total = 0;
+          selectedSeats.forEach(seat => {
+              if (seat.startsWith('A') || seat.startsWith('B')) {
+                  total += vipPrice; // Rows A and B are VIP
+              } else {
+                  total += basePrice; // Rows C and D are Normal
+              }
+          });
+          return total;
+      };
+      const total = calculateTotal();
+
+      // Seat Click Handler
+      const toggleSeat = (seatId) => {
+          if (selectedSeats.includes(seatId)) {
+              // Deselect seat
+              setSelectedSeats(selectedSeats.filter(s => s !== seatId));
+          } else {
+              // Anti-Scalper Check!
+              if (selectedSeats.length >= 10) {
+                  alert("Maximum 10 tickets per transaction to prevent scalping.");
+                  return;
+              }
+              // Select seat
+              setSelectedSeats([...selectedSeats, seatId]);
+          }
+      };
 
       const handlePayment = () => {
           if (!paymentMethod) return alert("Select payment method");
           setStep(3); setIsProcessing(true);
-          setTimeout(async () => { await confirmBooking(); setIsProcessing(false); }, 2000);
+          
+          // Send the updated data to the backend
+          const payload = { 
+            eventId: bookingModal.event.id, 
+            eventName: bookingModal.event.name,
+            quantity: selectedSeats.length, // Send the array length as quantity
+            totalPrice: total, 
+            user: user.email,
+            seats: selectedSeats.join(', ') // e.g. "A1, A2, C4"
+          };
+
+          // Simulate payment processing delay and then call the booking API
+          setTimeout(async () => { 
+              const res = await fetch('http://localhost:5000/api/book', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              const data = await res.json();
+              
+              if(res.ok) {
+                  setBookingModal({ show: false, event: null, quantity: 1 });
+                  setModal({ show: true, title: 'Success', message: `Booked Seats: ${payload.seats}. Receipt sent to email!`, type: 'success' });
+                  fetchEvents(); 
+              } else {
+                  setBookingModal({ show: false, event: null, quantity: 1 }); 
+                  setModal({ show: true, title: 'Booking Blocked 🛡️', message: data.message, type: 'error' });
+              }
+              setIsProcessing(false); 
+          }, 2000);
       };
 
+      // --- SEAT SELECTION UI ---
       return (
           <div className="modal-overlay">
-              <div className="modal-content" style={{maxWidth: '700px', width: '95%'}}>
+              <div className="modal-content" style={{maxWidth: '800px', width: '95%'}}>
                   <div className="steps">
                       <div className={`step ${step>=1?'active':''}`}></div><div className={`step ${step>=2?'active':''}`}></div><div className={`step ${step>=3?'active':''}`}></div>
                   </div>
                   <h2 className="modal-title">Checkout: {bookingModal.event.name}</h2>
                   
-                  
                   {step === 1 && (
                       <div className="checkout-container">
-                          <div className="checkout-left">
-                              <img src={bookingModal.event.venueImage} alt="Venue" className="venue-preview" onError={(e)=>{e.target.onerror=null; e.target.src='https://placehold.co/400'}} />
-                              <h3 style={{color:'#fff', margin:0}}>📍 {bookingModal.event.venue}</h3>
-                              <p style={{color:'#b0b0b0', fontSize:'0.9rem'}}>{bookingModal.event.venueDesc}</p>
+                          <div className="checkout-left" style={{flex: 0.6}}>
+                              {/* --- INTERACTIVE SEAT MAP UI --- */}
+                              <div className="stage">STAGE</div>
+                              <div className="seat-grid">
+                                  {/* Map over Rows (A & B are VIP, C & D are Normal) */}
+                                  {['A', 'B', 'C', 'D'].map(row => (
+                                      <div key={row} className="seat-row">
+                                          <div className="row-label">{row}</div>
+                                          {[1, 2, 3, 4, 5, 6].map(col => {
+                                              const seatId = `${row}${col}`;
+                                              const isVIP = row === 'A' || row === 'B';
+                                              const isSelected = selectedSeats.includes(seatId);
+                                              
+                                              return (
+                                                  <div 
+                                                    key={seatId} 
+                                                    onClick={() => toggleSeat(seatId)}
+                                                    className={`seat ${isVIP ? 'vip' : ''} ${isSelected ? 'selected' : ''}`}
+                                                    title={`${seatId} - RM${isVIP ? vipPrice : basePrice}`}
+                                                  >
+                                                      {col}
+                                                  </div>
+                                              )
+                                          })}
+                                      </div>
+                                  ))}
+                              </div>
+                              
+                              <div className="seat-legend">
+                                  <div className="legend-item"><div className="legend-box" style={{background: '#4a148c', border: '1px solid #bb86fc'}}></div> VIP (RM{vipPrice})</div>
+                                  <div className="legend-item"><div className="legend-box" style={{background: '#333'}}></div> Normal (RM{basePrice})</div>
+                                  <div className="legend-item"><div className="legend-box" style={{background: '#03dac6'}}></div> Selected</div>
+                              </div>
                           </div>
                           
-                          <div className="checkout-right">
-                              <label style={{color:'#b0b0b0'}}>Quantity:</label>
+                          <div className="checkout-right" style={{flex: 0.4}}>
+                              <h3 style={{color:'#fff', marginTop:0}}>📍 {bookingModal.event.venue}</h3>
+                              <p style={{color:'#b0b0b0', fontSize:'0.9rem'}}>Please select your seats from the map.</p>
                               
-                              <input type="number" className="auth-input" min="1" value={bookingModal.quantity} onChange={(e) => setBookingModal({...bookingModal, quantity: parseInt(e.target.value) || 1})} />
+                              <div style={{background: '#222', padding: '10px', borderRadius: '4px', marginBottom: '15px'}}>
+                                  <strong style={{color: '#bb86fc'}}>Selected Seats:</strong>
+                                  <p style={{color: '#fff', margin: '5px 0'}}>{selectedSeats.length > 0 ? selectedSeats.join(', ') : 'None'}</p>
+                              </div>
+
                               <div className="price-calculation">
-                                  <div className="price-row"><span>Price:</span><span>RM{bookingModal.event.price}</span></div>
+                                  <div className="price-row"><span>Tickets:</span><span>{selectedSeats.length}</span></div>
                                   <div className="price-row total-row"><span>Total:</span><span>RM{total}</span></div>
                               </div>
-                              <button className="book-btn" onClick={() => setStep(2)}>Next: Payment →</button>
+                              <button 
+                                className="book-btn" 
+                                disabled={selectedSeats.length === 0}
+                                style={{opacity: selectedSeats.length === 0 ? 0.5 : 1}}
+                                onClick={() => setStep(2)}>Next: Payment →
+                              </button>
                           </div>
                       </div>
                   )}
 
+                  {/* Step 2 and 3 remain the same */}
                   {step === 2 && (
                       <div>
                           <h3>Payment Method</h3>
@@ -239,7 +348,7 @@ function App() {
                           </div>
                       </div>
                   )}
-
+                
                   {step === 3 && <div style={{textAlign:'center', padding:'40px'}}><div className="spinner"></div><h3>Processing...</h3></div>}
                   {step === 1 && <button className="btn-secondary" style={{marginTop:'20px', width:'100%'}} onClick={() => setBookingModal({show:false})}>Cancel</button>}
               </div>
@@ -247,19 +356,69 @@ function App() {
       );
   };
 
-  const MyTicketsView = () => (
-      <div className="app-container">
-          <nav className="navbar"><div className="logo">My Tickets</div><button className="nav-btn" onClick={() => setView('home')}>← Back</button></nav>
-          <div className="events-grid" style={{marginTop:'20px'}}>
-              {myTickets.length === 0 ? <p>No tickets yet.</p> : myTickets.map(t => (
-                  <div key={t.id} className="event-card" style={{padding:'20px'}}>
-                      <h3>{t.eventName}</h3><p>Qty: {t.quantity}</p><p>Paid: RM{t.totalPrice}</p>
-                      <button className="btn-danger" onClick={() => cancelTicket(t.id)}>Cancel & Refund</button>
-                  </div>
-              ))}
+  // --- MY TICKETS VIEW with Event Details & Cancel Option ---//
+  const MyTicketsView = () => {
+      return (
+          <div className="app-container">
+              <nav className="navbar">
+                  <div className="logo">My Tickets</div>
+                  <button className="nav-btn" onClick={() => setView('home')}>← Back to Events</button>
+              </nav>
+              
+              <div className="ticket-list">
+                  {myTickets.length === 0 ? (
+                      <p style={{ color: '#777', textAlign: 'center', marginTop: '50px' }}>You have no upcoming concerts. Go book some!</p>
+                  ) : myTickets.map(ticket => {
+                      
+                      // Match the ticket to the event database to grab the image, date, and time
+                      const eventDetails = events.find(e => e.id === ticket.eventId) || {};
+
+                      return (
+                          <div key={ticket.id} className="ticket-card">
+                              {/* Left Side: Event Image */}
+                              <img 
+                                  src={eventDetails.image || 'https://placehold.co/400'} 
+                                  alt={ticket.eventName} 
+                                  className="ticket-img" 
+                                  onError={(e)=>{e.target.onerror=null; e.target.src='https://placehold.co/400'}}
+                              />
+                              
+                              {/* Middle: Event Details & Seats */}
+                              <div className="ticket-info">
+                                  <div>
+                                      <h3 className="ticket-title">{ticket.eventName}</h3>
+                                      <p className="ticket-meta">📅 {eventDetails.date || 'TBA'} {eventDetails.time && `at ${eventDetails.time}`}</p>
+                                      <p className="ticket-meta">📍 {eventDetails.venue || 'TBA'}{eventDetails.location ? `, ${eventDetails.location}` : ''}</p>
+                                      <p className="ticket-meta" style={{fontSize: '0.8rem', marginTop: '10px'}}>ID: #{ticket.id}</p>
+                                      
+                                      {/* Show Selected Seats if available */}
+                                      {ticket.seats && (
+                                          <div className="ticket-seats">Seats: {ticket.seats}</div>
+                                      )}
+                                  </div>
+                              </div>
+
+                              {/* Right Side: The "Stub" with Price and Cancel Button */}
+                              <div className="ticket-stub">
+                                  <p style={{ fontSize: '0.9rem', color: '#b0b0b0', margin: '0 0 5px 0' }}>Qty: {ticket.quantity}</p>
+                                  <h3 style={{ color: '#03dac6', margin: '0 0 15px 0' }}>RM {ticket.totalPrice}</h3>
+                                  
+                                  {/* Updated Wording based on Lecturer feedback */}
+                                  <button 
+                                      className="btn-danger" 
+                                      style={{ width: '100%', padding: '10px' }}
+                                      onClick={() => cancelTicket(ticket.id)}
+                                  >
+                                      Cancel Ticket
+                                  </button>
+                              </div>
+                          </div>
+                      );
+                  })}
+              </div>
           </div>
-      </div>
-  );
+      );
+  };
 
   const AdminDashboard = () => {
       const [tab, setTab] = useState('users');
