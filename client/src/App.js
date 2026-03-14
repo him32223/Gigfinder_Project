@@ -27,16 +27,21 @@ function App() {
   const [modal, setModal] = useState({ show: false, title: '', message: '', type: '' });
   const [bookingModal, setBookingModal] = useState({ show: false, event: null, quantity: 1 });
 
-  // --- PERSISTENCE: Save state to LocalStorage whenever it changes ---
+  // Navigation Fix & Token reading
   useEffect(() => {
-    if (user) localStorage.setItem('gigfinder_user', JSON.stringify(user));
-    else localStorage.removeItem('gigfinder_user');
-  }, [user]);
+    const handleHashChange = () => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash) setView(hash);
+    };
+    
+    // Check hash on initial load (crucial for clicking the email link)
+    if (window.location.hash) {
+        handleHashChange();
+    }
 
-  useEffect(() => {
-    localStorage.setItem('gigfinder_view', view);
-    window.location.hash = view;
-  }, [view]);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  },[]);
 
   // Navigation Fix (Back Button)
   useEffect(() => {
@@ -99,6 +104,31 @@ function App() {
     } else {
         setModal({ show: true, title: 'Login Failed', message: data.message, type: 'error' });
     }
+  };
+
+  const handleForgotPassword = async (e) => {
+      e.preventDefault();
+      const res = await fetch('http://localhost:5000/api/forgot-password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      setModal({ show: true, title: res.ok ? 'Email Sent' : 'Error', message: data.message, type: res.ok ? 'success' : 'error' });
+      if(res.ok) setView('login');
+  };
+
+  const handleResetPassword = async (e, token) => {
+      e.preventDefault();
+      const res = await fetch('http://localhost:5000/api/reset-password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, newPassword: password }) // Reusing password state for the new password
+      });
+      const data = await res.json();
+      setModal({ show: true, title: res.ok ? 'Success' : 'Error', message: data.message, type: res.ok ? 'success' : 'error' });
+      if(res.ok) {
+          setView('login');
+          window.location.hash = 'login';
+      }
   };
 
   const handleLogout = () => {
@@ -227,13 +257,34 @@ function App() {
       const [tab, setTab] = useState('users');
       const [users, setUsers] = useState([]);
       const [stats, setStats] = useState([]);
+      
+      // NEW: Added location and time to state
       const [newEvent, setNewEvent] = useState({ 
-          name: '', venue: '', date: '', price: '', capacity: '', venueDesc: '',
-          image: 'https://placehold.co/400', 
-          venueImage: 'https://placehold.co/400' 
+          name: '', venue: '', location: '', date: '', time: '', price: '', capacity: '', venueDesc: '',
+          image: '', venueImage: '' 
       });
+      
       const [artistSuggestions, setArtistSuggestions] = useState([]);
       const [isUploading, setIsUploading] = useState(false);
+
+      // NEW: Location Autocomplete Logic
+      const MALAYSIAN_LOCATIONS =["Kuala Lumpur", "Penang", "Johor Bahru", "Melaka", "Selangor", "Ipoh", "Kuching", "Kota Kinabalu", "Shah Alam", "Petaling Jaya", "Genting Highlands"];
+      const [locationSuggestions, setLocationSuggestions] = useState([]);
+
+      const handleLocationSearch = (query) => {
+          setNewEvent({...newEvent, location: query});
+          if (query.length > 0) {
+              const matches = MALAYSIAN_LOCATIONS.filter(loc => loc.toLowerCase().includes(query.toLowerCase()));
+              setLocationSuggestions(matches);
+          } else {
+              setLocationSuggestions([]);
+          }
+      };
+
+      const selectLocation = (loc) => {
+          setNewEvent({...newEvent, location: loc});
+          setLocationSuggestions([]);
+      };
 
       useEffect(() => {
           if (tab === 'users') fetch('http://localhost:5000/api/admin/users').then(res => res.json()).then(setUsers);
@@ -313,6 +364,8 @@ function App() {
               {tab === 'add' && (
                   <form onSubmit={handleAddEvent} className="auth-card" style={{margin:'0 auto'}}>
                       <h3>Add New Event</h3>
+                      
+                      {/* 1. MUSICBRAINZ ARTIST AUTOCOMPLETE */}
                       <div style={{position: 'relative'}}>
                         <input className="auth-input" placeholder="Artist Name (Type to Search)" value={newEvent.name} onChange={(e) => searchMusicBrainz(e.target.value)} required />
                         {artistSuggestions.length > 0 && (
@@ -326,10 +379,33 @@ function App() {
                         )}
                       </div>
 
-                      <input className="auth-input" placeholder="Venue Name" value={newEvent.venue} onChange={e => setNewEvent({...newEvent, venue: e.target.value})} required />
-                      <textarea className="auth-input" placeholder="Venue Description" value={newEvent.venueDesc} onChange={e => setNewEvent({...newEvent, venueDesc: e.target.value})} />
-                      <input className="auth-input" type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} required />
+                      {/* 2. VENUE NAME */}
+                      <input className="auth-input" placeholder="Venue Name (e.g., Spice Arena)" value={newEvent.venue} onChange={e => setNewEvent({...newEvent, venue: e.target.value})} required />
                       
+                      {/* 3. NEW: LOCATION AUTOCOMPLETE (Penang, KL, etc.) */}
+                      <div style={{position: 'relative'}}>
+                        <input className="auth-input" placeholder="City/Location (Type 'Pen'...)" value={newEvent.location} onChange={(e) => handleLocationSearch(e.target.value)} required />
+                        {locationSuggestions.length > 0 && (
+                            <div style={{position:'absolute', width:'100%', maxHeight:'150px', overflowY:'auto', background:'#1e1e1e', border:'1px solid #444', zIndex:100, borderRadius:'4px'}}>
+                                {locationSuggestions.map((loc, idx) => (
+                                    <div key={idx} style={{padding:'10px', cursor:'pointer', borderBottom:'1px solid #333', color:'#fff'}} onClick={() => selectLocation(loc)}>
+                                        📍 {loc}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                      </div>
+
+                      {/* 4. VENUE DESCRIPTION */}
+                      <textarea className="auth-input" placeholder="Venue Description" value={newEvent.venueDesc} onChange={e => setNewEvent({...newEvent, venueDesc: e.target.value})} />
+                      
+                      {/* 5. NEW: DATE AND TIME SIDE-BY-SIDE */}
+                      <div style={{display:'flex', gap:'10px'}}>
+                          <input className="auth-input" type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} required />
+                          <input className="auth-input" type="time" value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} required />
+                      </div>
+                      
+                      {/* 6. SECURE IMAGE UPLOADS */}
                       <div style={{textAlign: 'left', marginTop: '10px'}}>
                         <label style={{color:'#b0b0b0', fontSize:'0.9rem'}}>Artist Image (.jpg only):</label>
                         <input type="file" accept=".jpg,.jpeg" style={{color:'#fff', marginTop:'5px'}} onChange={(e) => handleFileUpload(e, 'image')} />
@@ -342,22 +418,84 @@ function App() {
                         {newEvent.venueImage && <p style={{color:'green', fontSize:'0.7rem'}}>File attached: {newEvent.venueImage}</p>}
                       </div>
                       
+                      {/* 7. PRICE AND CAPACITY */}
                       <div style={{display:'flex', gap:'10px'}}>
                           <input className="auth-input" type="number" placeholder="Price" value={newEvent.price} onChange={e => setNewEvent({...newEvent, price: parseInt(e.target.value)})} required />
                           <input className="auth-input" type="number" placeholder="Capacity" value={newEvent.capacity} onChange={e => setNewEvent({...newEvent, capacity: parseInt(e.target.value)})} required />
                       </div>
+                      
                       <button className="book-btn" disabled={isUploading}>{isUploading ? 'Uploading...' : 'Publish Event'}</button>
                   </form>
-              )}
+              )}  
           </div>
       )
   }
 
   // --- VIEW RENDERING ---
 
+  // --- VIEW RENDERING ---
+
   if (view === 'login' || view === 'register') return (
-      <div className="app-container"><div className="auth-container"><div className="auth-card"><h1>GigFinder</h1><form onSubmit={view==='login'?handleLogin:handleRegister}><input className="auth-input" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required /><input className="auth-input" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required /><button className="book-btn">{view==='login'?'Login':'Register'}</button></form><p onClick={() => setView(view==='login'?'register':'login')} style={{cursor:'pointer', marginTop:'10px', color:'#bb86fc'}}>{view==='login'?'Create Account':'Back to Login'}</p></div></div>{modal.show && <div className="modal-overlay"><div className="modal-content"><h2>{modal.title}</h2><p>{modal.message}</p><button className="book-btn" onClick={() => setModal({show:false})}>OK</button></div></div>}</div>
+      <div className="app-container">
+        <div className="auth-container">
+            <div className="auth-card">
+                <h1>GigFinder</h1>
+                <form onSubmit={view==='login' ? handleLogin : handleRegister}>
+                    <input className="auth-input" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
+                    <input className="auth-input" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
+                    <button className="book-btn">{view==='login' ? 'Login' : 'Register'}</button>
+                </form>
+                
+                <div style={{marginTop: '15px', fontSize: '0.9rem'}}>
+                    <p onClick={() => setView(view==='login' ? 'register' : 'login')} style={{cursor:'pointer', color:'#bb86fc'}}>
+                        {view==='login' ? 'Create an Account' : 'Back to Login'}
+                    </p>
+                    {view === 'login' && (
+                        <p onClick={() => setView('forgot-password')} style={{cursor:'pointer', color:'#03dac6', marginTop:'5px'}}>
+                            Forgot Password?
+                        </p>
+                    )}
+                </div>
+            </div>
+        </div>
+        {modal.show && <div className="modal-overlay"><div className="modal-content"><h2>{modal.title}</h2><p>{modal.message}</p><button className="book-btn" onClick={() => setModal({show:false})}>OK</button></div></div>}
+      </div>
   );
+
+  if (view === 'forgot-password') return (
+      <div className="app-container">
+        <div className="auth-container">
+            <div className="auth-card">
+                <h2>Reset Password</h2>
+                <p style={{color: '#aaa', fontSize: '0.9rem', marginBottom: '15px'}}>Enter your email and we'll send you a reset link.</p>
+                <form onSubmit={handleForgotPassword}>
+                    <input className="auth-input" type="email" placeholder="Your Email Address" value={email} onChange={e=>setEmail(e.target.value)} required />
+                    <button className="book-btn">Send Reset Link</button>
+                </form>
+                <p onClick={() => setView('login')} style={{cursor:'pointer', marginTop:'15px', color:'#bb86fc'}}>Back to Login</p>
+            </div>
+        </div>
+        {modal.show && <div className="modal-overlay"><div className="modal-content"><h2>{modal.title}</h2><p>{modal.message}</p><button className="book-btn" onClick={() => setModal({show:false})}>OK</button></div></div>}
+      </div>
+  );
+
+  if (view.startsWith('reset-password/')) {
+      const token = view.split('/')[1]; // Extract token from URL
+      return (
+          <div className="app-container">
+            <div className="auth-container">
+                <div className="auth-card">
+                    <h2>Set New Password</h2>
+                    <form onSubmit={(e) => handleResetPassword(e, token)}>
+                        <input className="auth-input" type="password" placeholder="Enter New Password" value={password} onChange={e=>setPassword(e.target.value)} required minLength="3" />
+                        <button className="book-btn">Save New Password</button>
+                    </form>
+                </div>
+            </div>
+            {modal.show && <div className="modal-overlay"><div className="modal-content"><h2>{modal.title}</h2><p>{modal.message}</p><button className="book-btn" onClick={() => setModal({show:false})}>OK</button></div></div>}
+          </div>
+      );
+  }
 
   if (view === 'admin') return <AdminDashboard />;
   if (view === 'mytickets') return <MyTicketsView />;
@@ -429,6 +567,7 @@ function App() {
         </select>
       </div>
 
+      {/* UPCOMING EVENTS */}
       <h2 style={{borderBottom: '1px solid #333', paddingBottom: '10px'}}>🔥 Upcoming Concerts</h2>
       <div className="events-grid">
         {sortedUpcoming.length === 0 ? <p style={{color: '#777'}}>No upcoming events found.</p> : sortedUpcoming.map(e => {
@@ -437,7 +576,12 @@ function App() {
                 <div key={e.id} className="event-card">
                     <img src={e.image} className="card-img" alt={e.name} onError={(e)=>{e.target.onerror=null; e.target.src='https://placehold.co/400'}} />
                     <div className="card-content">
-                        <h2>{e.name}</h2><p>{e.date} @ {e.venue}</p>
+                        <h2>{e.name}</h2>
+                        {/* UPDATED: Displays Date, Time, Venue, and Location */}
+                        <p style={{color: '#b0b0b0', fontSize: '0.9rem', marginBottom: '10px'}}>
+                            📅 {e.date} {e.time && `at ${e.time}`}<br/>
+                            📍 {e.venue}{e.location && `, ${e.location}`}
+                        </p>
                         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
                             <span>RM{e.price}</span>
                             <span className={`badge ${isSoldOut ? 'badge-soldout' : 'badge-available'}`}>{isSoldOut ? 'SOLD OUT' : `${e.capacity - e.sold} left`}</span>
@@ -449,6 +593,7 @@ function App() {
         })}
       </div>
 
+      {/* PAST EVENTS */}
       {pastEvents.length > 0 && (
           <>
             <h2 style={{borderBottom: '1px solid #333', paddingBottom: '10px', marginTop: '40px', color: '#777'}}>📜 Past Events</h2>
@@ -457,7 +602,12 @@ function App() {
                     <div key={e.id} className="event-card" style={{filter: 'grayscale(100%)'}}>
                         <img src={e.image} className="card-img" alt={e.name} onError={(e)=>{e.target.onerror=null; e.target.src='https://placehold.co/400'}} />
                         <div className="card-content">
-                            <h2>{e.name}</h2><p>{e.date} @ {e.venue}</p>
+                            <h2>{e.name}</h2>
+                            {/* UPDATED: Displays Date, Time, Venue, and Location for Past Events too */}
+                            <p style={{color: '#b0b0b0', fontSize: '0.9rem', marginBottom: '10px'}}>
+                                📅 {e.date} {e.time && `at ${e.time}`}<br/>
+                                📍 {e.venue}{e.location && `, ${e.location}`}
+                            </p>
                             <button className="btn-secondary" disabled style={{width:'100%', cursor:'not-allowed'}}>Event Passed</button>
                         </div>
                     </div>
@@ -465,6 +615,8 @@ function App() {
             </div>
           </>
       )}
+
+      
       <ChatBot />
     </div>
     

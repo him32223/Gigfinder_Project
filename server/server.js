@@ -6,6 +6,7 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const mongoose = require('mongoose'); // NEW: Import Mongoose
 const fs = require('fs');
+const crypto = require('crypto'); // Add this near your other requires
 
 const app = express();
 const PORT = 5000;
@@ -36,13 +37,17 @@ const User = mongoose.model('User', new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, default: 'user' },
-    suspensionEnd: { type: Date, default: null }
+    suspensionEnd: { type: Date, default: null },
+    resetToken: { type: String, default: null },       // NEW
+    resetTokenExpiry: { type: Date, default: null }    // NEW
 }));
 
 // Define Event Schema
 const Event = mongoose.model('Event', new mongoose.Schema({
     name: String,
     date: String,
+    time: String,        // NEW: Start Time
+    location: String,    // NEW: City/State (e.g., Penang)
     venue: String,
     venueDesc: String,
     price: Number,
@@ -140,6 +145,75 @@ app.post('/api/register', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- FORGOT PASSWORD ROUTE ---
+app.post('/api/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        
+        if (!user) return res.status(404).json({ message: "If this email exists, a link will be sent." }); // Security best practice
+
+        // Generate a random 20-character token
+        const token = crypto.randomBytes(20).toString('hex');
+        
+        // Save token and set expiration to 1 hour from now
+        user.resetToken = token;
+        user.resetTokenExpiry = Date.now() + 3600000; 
+        await user.save();
+
+        // Create the reset link (points to your React frontend)
+        const resetLink = `http://localhost:3000/#reset-password/${token}`;
+
+        const mailOptions = {
+            from: `"GigFinder Support" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `🔒 GigFinder Password Reset`,
+            html: `
+                <div style="background:#121212; color:#fff; padding:20px; border-radius:8px;">
+                    <h2 style="color:#bb86fc;">Password Reset Request</h2>
+                    <p>You requested to reset your GigFinder password.</p>
+                    <p>Click the link below to securely set a new password. This link expires in 1 hour.</p>
+                    <a href="${resetLink}" style="background:#03dac6; color:#000; padding:10px 20px; text-decoration:none; border-radius:4px; display:inline-block; margin-top:10px;">Reset Password</a>
+                    <p style="color:#888; margin-top:20px; font-size:12px;">If you did not request this, please ignore this email.</p>
+                </div>
+            `
+        };
+
+        transporter.sendMail(mailOptions);
+        res.json({ message: "Password reset link sent to your email!" });
+
+    } catch (error) {
+        res.status(500).json({ message: "Error processing request" });
+    }
+});
+
+// --- RESET PASSWORD ROUTE ---
+app.post('/api/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        // Find user with this token AND ensure it hasn't expired
+        const user = await User.findOne({ 
+            resetToken: token, 
+            resetTokenExpiry: { $gt: Date.now() } 
+        });
+
+        if (!user) return res.status(400).json({ message: "Invalid or expired token." });
+
+        // Update password and clear the tokens
+        user.password = newPassword;
+        user.resetToken = null;
+        user.resetTokenExpiry = null;
+        await user.save();
+
+        res.json({ message: "Password successfully reset! You can now log in." });
+
+    } catch (error) {
+        res.status(500).json({ message: "Error resetting password" });
+    }
+});
+
+
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email, password });
@@ -169,12 +243,34 @@ app.post('/api/book', async (req, res) => {
     // Create Booking
     const newBooking = await Booking.create({ eventId, eventName, user, quantity, totalPrice });
 
-    // Send Email (Async)
+    // --- UPDATED: SEND REAL EMAIL WITH FULL DETAILS ---
     const mailOptions = {
         from: `"GigFinder Tickets" <${process.env.EMAIL_USER}>`,
         to: user, 
         subject: `🎟️ Your Tickets for ${eventName} are Confirmed!`,
-        html: `<h2>Booking Confirmed! 🎉</h2><p>Booking ID: #${newBooking._id}</p><p>Total: RM${totalPrice}</p>`
+        html: `
+            <div style="font-family: Arial, sans-serif; background-color: #121212; color: #ffffff; padding: 25px; border-radius: 10px; max-width: 600px; margin: auto;">
+                <h1 style="color: #bb86fc; text-align: center;">GigFinder</h1>
+                <h2 style="color: #03dac6; text-align: center;">Booking Confirmed! 🎉</h2>
+                <p>Hi there,</p>
+                <p>You have successfully secured your spot for <strong>${eventName}</strong>.</p>
+                
+                <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 4px solid #bb86fc; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Booking ID:</strong> #${newBooking._id}</p>
+                    <p style="margin: 5px 0;"><strong>Date:</strong> ${event.date}</p>
+                    <p style="margin: 5px 0;"><strong>Time:</strong> ${event.time}</p>
+                    <p style="margin: 5px 0;"><strong>Location:</strong> ${event.venue}, ${event.location}</p>
+                    <hr style="border: 0; border-top: 1px solid #333; margin: 10px 0;">
+                    <p style="margin: 5px 0;"><strong>Quantity:</strong> ${quantity} Ticket(s)</p>
+                    <p style="margin: 5px 0; font-size: 1.2rem; color: #03dac6;"><strong>Total Paid:</strong> RM ${totalPrice}</p>
+                </div>
+                
+                <p style="color: #b0b0b0; font-size: 13px; text-align: center;">
+                    Please present this email at the venue entrance. 
+                    <br>Enjoy the show!
+                </p>
+            </div>
+        `
     };
     transporter.sendMail(mailOptions).catch(console.error);
 
