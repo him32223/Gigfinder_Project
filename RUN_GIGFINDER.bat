@@ -5,7 +5,7 @@ echo        🎸 GigFinder - One-Click Start Script 🎸
 echo =======================================================
 echo.
 
-:: Step 1: Check if the .env file exists in the server folder
+:: Step 1: Check for .env file
 IF NOT EXIST "server\.env" (
     color 0C
     echo [ERROR] The server/.env file is missing!
@@ -23,16 +23,30 @@ IF NOT EXIST "server\.env" (
     exit /b
 )
 
-:: Step 2: Install dependencies and run
 color 0A
-echo[SUCCESS] .env file found!
+echo [SUCCESS] .env file found!
 echo.
-echo Installing required packages (this might take a minute)...
+echo Installing required packages (this might take a few minutes)...
 call npm install
 call npm run install-all
 
+:: Step 2: Run Pre-Flight Diagnostics
+color 0E
+node server/diagnostic.js
+
+:: Check if diagnostic.js crashed (exit code 1)
+if %errorlevel% neq 0 (
+    color 0C
+    echo.
+    echo[CRITICAL ERROR] Diagnostics failed. The server will not start.
+    pause
+    exit /b
+)
+
+:: Step 3: Launch the Application
+color 0A
 echo.
-echo 🚀 Launching Servers (Backend on 5000, Frontend on 3000)...
+echo Launching Servers (Backend on 5000, Frontend on 3000)...
 call npm start
 
 pause

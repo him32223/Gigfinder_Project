@@ -50,3 +50,35 @@ Before running the app, you must link the database and API keys.
    EMAIL_PASS=your_16_letter_app_password
    MONGO_URI=mongodb+srv://<username>:<password>@cluster...
    GEMINI_API_KEY=AIzaSy...
+
+Step 2: One-Click Launch (Windows)
+Double-click the START_GIGFINDER.bat file located in the root directory.
+The script will automatically check for your .env file, install all necessary node_modules for both the client and server, and launch the application.
+(Mac/Linux Users): Open a terminal in the root folder, run npm run install-all, followed by npm start.
+
+
+Step 3: Database Seeding (First Run Only)
+If connecting to an empty MongoDB cluster, populate the initial mock data by visiting:
+👉 http://localhost:5000/api/seed
+
+
+Testing Credentials
+To explore the application's different permission levels, please use the following seeded accounts:
+Role	Email	Password
+Administrator	admin@gigfinder.com	admin
+Standard User	user@test.com	123
+
+
+📁 Project Structure
+GigFinder_Project/
+├── START_GIGFINDER.bat  # 👈 Evaluator Start Script
+├── package.json         # Root scripts (Concurrently)
+├── server/              # Backend Application Layer
+│   ├── .env             # (You create this) API Keys & DB Config
+│   ├── uploads/         # Local storage for verified .jpg files
+│   └── server.js        # Express API, Mongoose Models, AI Logic
+└── client/              # Frontend Presentation Layer
+    ├── public/
+    └── src/
+        ├── App.js       # Main React Logic, Routing, UI Components
+        └── App.css      # Custom UI Styling (Dark Theme)
