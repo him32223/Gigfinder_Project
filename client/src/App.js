@@ -138,6 +138,7 @@ function App() {
       localStorage.removeItem('gigfinder_view');
   };
 
+  //booking handler with anti-scalper logic
   const confirmBooking = async () => {
     const totalPrice = bookingModal.event.price * bookingModal.quantity;
     const res = await fetch('http://localhost:5000/api/book', {
@@ -150,12 +151,16 @@ function App() {
       })
     });
     const data = await res.json();
+
+    //Booking Success send email and show success modal, then refresh events and my tickets
     if(res.ok) {
         setBookingModal({ show: false, event: null, quantity: 1 });
         setModal({ show: true, title: 'Success', message: 'Tickets Booked! Sent to email.', type: 'success' });
         fetchEvents(); 
     } else {
-        alert(data.message);
+        // ---SHOW ANTI-SCALPER MESSAGE IN THE CUSTOM MODAL --- remove block so that users can try again without refreshing
+        setBookingModal({ show: false, event: null, quantity: 1 }); // Close checkout wizard
+        setModal({ show: true, title: 'Booking Blocked 🛡️', message: data.message, type: 'error' });
     }
   };
 
@@ -194,6 +199,7 @@ function App() {
                   </div>
                   <h2 className="modal-title">Checkout: {bookingModal.event.name}</h2>
                   
+                  
                   {step === 1 && (
                       <div className="checkout-container">
                           <div className="checkout-left">
@@ -201,9 +207,11 @@ function App() {
                               <h3 style={{color:'#fff', margin:0}}>📍 {bookingModal.event.venue}</h3>
                               <p style={{color:'#b0b0b0', fontSize:'0.9rem'}}>{bookingModal.event.venueDesc}</p>
                           </div>
+                          
                           <div className="checkout-right">
                               <label style={{color:'#b0b0b0'}}>Quantity:</label>
-                              <input type="number" className="auth-input" min="1" max="10" value={bookingModal.quantity} onChange={(e) => setBookingModal({...bookingModal, quantity: parseInt(e.target.value) || 1})} />
+                              
+                              <input type="number" className="auth-input" min="1" value={bookingModal.quantity} onChange={(e) => setBookingModal({...bookingModal, quantity: parseInt(e.target.value) || 1})} />
                               <div className="price-calculation">
                                   <div className="price-row"><span>Price:</span><span>RM{bookingModal.event.price}</span></div>
                                   <div className="price-row total-row"><span>Total:</span><span>RM{total}</span></div>

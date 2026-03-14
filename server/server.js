@@ -231,6 +231,17 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/book', async (req, res) => {
     const { eventId, user, quantity, eventName, totalPrice } = req.body;
     
+    // ---ANTI-SCALPER VALIDATION --- Maximum 10 tickets per transaction
+    if (quantity > 10) {
+        return res.status(400).json({ 
+            message: `Sorry, our maximum limit is 10 tickets per transaction to prevent scalpers. If you require more, please contact the admin at admin@gigfinder.com` 
+        });
+    }
+    if (quantity <= 0 || !Number.isInteger(quantity)) {
+        return res.status(400).json({ message: "Invalid quantity requested." });
+    }
+
+
     // Find Event in MongoDB by ID
     const event = await Event.findById(eventId);
     if (!event) return res.status(404).json({ message: "Event not found" });
