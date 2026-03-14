@@ -69,16 +69,18 @@ Administrator	admin@gigfinder.com	admin
 Standard User	user@test.com	123
 
 
-📁 Project Structure
+## 📁 Project Structure
+
+```text
 GigFinder_Project/
-├── START_GIGFINDER.bat  # 👈 Evaluator Start Script
-├── package.json         # Root scripts (Concurrently)
-├── server/              # Backend Application Layer
-│   ├── .env             # (You create this) API Keys & DB Config
-│   ├── uploads/         # Local storage for verified .jpg files
-│   └── server.js        # Express API, Mongoose Models, AI Logic
-└── client/              # Frontend Presentation Layer
-    ├── public/
+├── START_GIGFINDER.bat      # Main entry point (Evaluator Start Script)
+├── package.json             # Root configuration & Concurrently scripts
+├── server/                  # Backend Application Layer
+│   ├── .env                 # API Keys & Database Configuration (Manual setup)
+│   ├── uploads/             # Local storage for verified .jpg files
+│   └── server.js            # Express API, Mongoose Models, & AI Logic
+└── client/                  # Frontend Presentation Layer
+    ├── public/              # Static assets
     └── src/
-        ├── App.js       # Main React Logic, Routing, UI Components
-        └── App.css      # Custom UI Styling (Dark Theme)
+        ├── App.js           # Main React Logic, Routing, & UI Components
+        └── App.css          # Custom UI Styling (Dark Theme)
