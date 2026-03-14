@@ -45,6 +45,7 @@ const User = mongoose.model('User', new mongoose.Schema({
 // Define Event Schema
 const Event = mongoose.model('Event', new mongoose.Schema({
     name: String,
+    seats: String,       // NEW: Comma-separated seat identifiers (e.g., "A1,A2,B3")
     date: String,
     time: String,        // NEW: Start Time
     location: String,    // NEW: City/State (e.g., Penang)
@@ -228,33 +229,31 @@ app.post('/api/login', async (req, res) => {
     } else res.status(401).json({ message: "Invalid credentials" });
 });
 
+// --- BOOKING ROUTE (Now with MongoDB and Anti-Scalper Validation) ---
 app.post('/api/book', async (req, res) => {
-    const { eventId, user, quantity, eventName, totalPrice } = req.body;
+    // Make sure 'seats' is extracted here!
+    const { eventId, user, quantity, eventName, totalPrice, seats } = req.body; 
     
-    // ---ANTI-SCALPER VALIDATION --- Maximum 10 tickets per transaction
+    // Anti-Scalper Check: Limit to 10 tickets per transaction
     if (quantity > 10) {
         return res.status(400).json({ 
             message: `Sorry, our maximum limit is 10 tickets per transaction to prevent scalpers. If you require more, please contact the admin at admin@gigfinder.com` 
         });
     }
-    if (quantity <= 0 || !Number.isInteger(quantity)) {
-        return res.status(400).json({ message: "Invalid quantity requested." });
-    }
+    if (quantity <= 0 || !Number.isInteger(quantity)) return res.status(400).json({ message: "Invalid quantity requested." });
 
-
-    // Find Event in MongoDB by ID
+    // Check if event exists and has enough capacity
     const event = await Event.findById(eventId);
     if (!event) return res.status(404).json({ message: "Event not found" });
-    if (event.sold + quantity > event.capacity) return res.status(400).json({ message: `Not enough tickets!` });
+    if (event.sold + quantity > event.capacity) return res.status(400).json({ message: `Not enough tickets! Only ${event.capacity - event.sold} left.` });
     
-    // Update Inventory
     event.sold += quantity;
     await event.save();
 
-    // Create Booking
-    const newBooking = await Booking.create({ eventId, eventName, user, quantity, totalPrice });
+    // Pass 'seats' to MongoDB creation
+    const newBooking = await Booking.create({ eventId, eventName, user, quantity, totalPrice, seats });
 
-    // --- UPDATED: SEND REAL EMAIL WITH FULL DETAILS ---
+    // Add seats to the email receipt
     const mailOptions = {
         from: `"GigFinder Tickets" <${process.env.EMAIL_USER}>`,
         to: user, 
@@ -269,17 +268,13 @@ app.post('/api/book', async (req, res) => {
                 <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-left: 4px solid #bb86fc; margin: 20px 0;">
                     <p style="margin: 5px 0;"><strong>Booking ID:</strong> #${newBooking._id}</p>
                     <p style="margin: 5px 0;"><strong>Date:</strong> ${event.date}</p>
-                    <p style="margin: 5px 0;"><strong>Time:</strong> ${event.time}</p>
-                    <p style="margin: 5px 0;"><strong>Location:</strong> ${event.venue}, ${event.location}</p>
+                    <p style="margin: 5px 0;"><strong>Time:</strong> ${event.time || 'TBA'}</p>
+                    <p style="margin: 5px 0;"><strong>Location:</strong> ${event.venue}${event.location ? `, ${event.location}` : ''}</p>
                     <hr style="border: 0; border-top: 1px solid #333; margin: 10px 0;">
                     <p style="margin: 5px 0;"><strong>Quantity:</strong> ${quantity} Ticket(s)</p>
+                    <p style="margin: 5px 0; color: #bb86fc;"><strong>Selected Seats:</strong> ${seats}</p>
                     <p style="margin: 5px 0; font-size: 1.2rem; color: #03dac6;"><strong>Total Paid:</strong> RM ${totalPrice}</p>
                 </div>
-                
-                <p style="color: #b0b0b0; font-size: 13px; text-align: center;">
-                    Please present this email at the venue entrance. 
-                    <br>Enjoy the show!
-                </p>
             </div>
         `
     };

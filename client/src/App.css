@@ -360,3 +360,170 @@ body {
 .steps { display: flex; gap: 5px; margin-bottom: 20px; }
 .step { flex: 1; height: 4px; background: #333; border-radius: 2px; }
 .step.active { background: var(--secondary); }
+
+/* --- INTERACTIVE SEAT MAP --- */
+/* This is a simplified seat map for demonstration purposes */
+.stage {
+  background: linear-gradient(90deg, #bb86fc, #03dac6);
+  color: #000;
+  text-align: center;
+  padding: 5px;
+  font-weight: bold;
+  border-radius: 4px 4px 50px 50px; /* Curves the front of the stage */
+  margin-bottom: 20px;
+  letter-spacing: 2px;
+}
+
+.seat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.seat-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.row-label {
+  color: #b0b0b0;
+  font-weight: bold;
+  width: 20px;
+}
+
+.seat {
+  width: 30px;
+  height: 30px;
+  background-color: #333;
+  border-radius: 6px 6px 2px 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.7rem;
+  color: transparent; /* Hides text until hover */
+}
+
+.seat:hover {
+  transform: scale(1.1);
+  color: white;
+}
+
+/* VIP Seats (Gold/Purple) */
+.seat.vip {
+  background-color: #4a148c;
+  border: 1px solid #bb86fc;
+}
+
+/* Selected State */
+.seat.selected {
+  background-color: #03dac6;
+  border: 1px solid #000;
+  color: #000;
+  font-weight: bold;
+}
+
+/* Legend */
+.seat-legend {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+  font-size: 0.8rem;
+  color: #b0b0b0;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-box {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+}
+
+/* --- MY TICKETS UI --- */
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.ticket-card {
+  display: flex;
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  border: 1px solid #333;
+}
+
+.ticket-img {
+  width: 200px;
+  object-fit: cover;
+  border-right: 1px solid #333;
+}
+
+.ticket-info {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ticket-stub {
+  padding: 20px;
+  background-color: #252525;
+  border-left: 2px dashed #555; /* Creates the "tear here" look */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-width: 150px;
+  text-align: center;
+}
+
+.ticket-title {
+  font-size: 1.5rem;
+  color: var(--primary);
+  margin: 0 0 10px 0;
+}
+
+.ticket-meta {
+  color: #b0b0b0;
+  font-size: 0.95rem;
+  margin: 3px 0;
+}
+
+.ticket-seats {
+  display: inline-block;
+  background: rgba(187, 134, 252, 0.2);
+  color: var(--primary);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+  .ticket-card {
+    flex-direction: column;
+  }
+  .ticket-img {
+    width: 100%;
+    height: 150px;
+    border-right: none;
+    border-bottom: 1px solid #333;
+  }
+  .ticket-stub {
+    border-left: none;
+    border-top: 2px dashed #555;
+  }
+}
